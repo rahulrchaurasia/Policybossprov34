@@ -17,8 +17,8 @@ android {
         applicationId = "com.policyboss.policybosspro"
         minSdk = 24
         targetSdk = 34
-        versionCode = 46
-        versionName = "1.4.0.5"
+        versionCode = 47
+        versionName = "1.4.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -149,6 +149,7 @@ dependencies {
 //    implementation("com.github.yalantis:ucrop:2.2.8-native")
 
     implementation("com.vanniktech:android-image-cropper:4.6.0")
+
 //
     implementation ("io.github.chaosleung:pinview:1.4.4")
 

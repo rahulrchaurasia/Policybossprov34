@@ -140,7 +140,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="10dp"
-                android:text="Choose File" />
+                android:text="Choose File From Document Folder Only" />
 
 
         </LinearLayout>

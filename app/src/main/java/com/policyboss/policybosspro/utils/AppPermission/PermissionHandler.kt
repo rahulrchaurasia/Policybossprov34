@@ -10,8 +10,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.provider.Settings
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class PermissionHandler(private val activity: AppCompatActivity)  {
+//tempRahul
+
+class PermissionHandler  constructor (private val activity: AppCompatActivity)  {
 
     private var permissionCallback: ((Boolean) -> Unit)? = null
     private var permanentlyDeniedCallback: ((List<String>) -> Unit)? = null

@@ -110,6 +110,29 @@ object Utility {
         return finalFileSize >= maxFileSize
     }
 
+    //Method to handle URI from content provider or local storage
+    @JvmStatic
+    fun handleUri(context: Context, uri: Uri): String? {
+        return when (uri.scheme) {
+            "content" -> {
+                // For content URIs (e.g., cloud storage), get the file path using the content resolver
+                try {
+                    getFilePath(context, uri)
+                } catch (e: Exception) {
+                    Log.e("handleUri", "Error getting file path for content URI", e)
+                    null
+                }
+            }
+            "file" -> {
+                // For file URIs (e.g., local files), directly get the path
+                uri.path
+            }
+            else -> {
+                // Handle any other URI types, such as cloud storage
+                null
+            }
+        }
+    }
 
     @JvmStatic
     fun getDeviceDetail(context: Context) : DeviceDetailEntity {

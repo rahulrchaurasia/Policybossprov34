@@ -244,6 +244,8 @@
             android:name="com.canhub.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat" />
 
+
+
         <meta-data
             android:name="com.razorpay.ApiKey"
             android:value="rzp_live_DFxDFYDslN2DIq" />

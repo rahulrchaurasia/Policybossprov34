@@ -1236,7 +1236,29 @@ public class BaseJavaActivity extends AppCompatActivity {
         }
     }
 
+    public void showAlert(String strTitle ,String strBody) {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(BaseJavaActivity.this);
+            builder.setTitle(strTitle);
 
+            builder.setMessage(strBody);
+            String positiveText = "Ok";
+            builder.setPositiveButton(positiveText,
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+
+                        }
+                    });
+            final AlertDialog dialog = builder.create();
+            dialog.setCancelable(false);
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.show();
+        } catch (Exception ex) {
+            Toast.makeText(this, "Please try again..", Toast.LENGTH_SHORT).show();
+        }
+    }
     public void showAlert(String strBody) {
         try {
             AlertDialog.Builder builder = new AlertDialog.Builder(BaseJavaActivity.this);

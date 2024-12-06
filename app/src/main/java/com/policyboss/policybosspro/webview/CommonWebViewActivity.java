@@ -6,11 +6,15 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DownloadManager;
@@ -50,6 +54,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.policyboss.policybosspro.BaseJavaActivity;
 import com.policyboss.policybosspro.R;
@@ -70,9 +78,12 @@ import com.policyboss.policybosspro.facade.PolicyBossPrefsManager;
 import com.policyboss.policybosspro.paymentEliteplan.RazorPaymentEliteActivity;
 import com.policyboss.policybosspro.paymentEliteplan.SyncRazorPaymentActivity;
 import com.policyboss.policybosspro.utility.Utility;
+import com.policyboss.policybosspro.utils.AppPermission.PermissionHandler;
+import com.policyboss.policybosspro.utils.CameraGalleryManager.CameraGalleryManager;
 import com.policyboss.policybosspro.utils.Constant;
 import com.policyboss.policybosspro.utils.FileDownloader;
 import com.policyboss.policybosspro.utils.FileUtilNew;
+import com.policyboss.policybosspro.utils.FileUtils;
 import com.policyboss.policybosspro.view.home.HomeActivity;
 
 import com.policyboss.policybosspro.view.syncContact.ui.WelcomeSyncContactActivityKotlin;
@@ -81,6 +92,7 @@ import com.webengage.sdk.android.WebEngage;
 import com.webengage.sdk.android.bridge.WebEngageMobileBridge;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -89,7 +101,8 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import okhttp3.MultipartBody;
 
-
+// Added File For Camera gallery : FileUtils  , Utility, Base Activity
+// crop Functinality.. Launcher of cmer, gallery pdf {cropLauncher}
 @AndroidEntryPoint
 public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaActivity.PopUpListener, BaseJavaActivity.WebViewPopUpListener, IResponseSubcriber {
 
@@ -123,6 +136,12 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
 
     @Inject
     PolicyBossPrefsManager prefManager;
+
+
+    CameraGalleryManager cameraGalleryManager;   //tempRahul
+
+    PermissionHandler permissionHandler ;
+
     String[] perms = {
             "android.permission.CAMERA",
             "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -156,6 +175,8 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
 
     ActivityResultLauncher<String> galleryLauncher;
     ActivityResultLauncher<Uri> cameraLauncher;
+
+    private ActivityResultLauncher<CropImageContractOptions> cropImageLauncher;
     Analytics weAnalytics;
     Map<String, Object> screenData;
     @Override
@@ -209,6 +230,10 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
 
         prefManager = new PolicyBossPrefsManager(this);
 
+        permissionHandler = new PermissionHandler(this);
+
+       // cameraGalleryManager = new CameraGalleryManager(this, permissionHandler);
+
         userConstantEntity = prefManager.getUserConstantEntity();
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -223,40 +248,65 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
             Toast.makeText(this, "Check your internet connection", Toast.LENGTH_SHORT).show();
         }
 
+        // Initialize ActivityResultLaunchers
+        try{
+            cropImageLauncher = registerForActivityResult(new CropImageContract(), result -> {
+                if (result.isSuccessful()) {
+                    Uri croppedImageUri = result.getUriContent();
+                    // String croppedImageFilePath = result.getUriFilePath(this); // Optional
+
+                    handleCropImage(croppedImageUri);   //tempRahul Call cropping Image here
+
+                } else {
+                    Exception exception = result.getError();
+                    Log.e("ImageCropError", "Error during cropping: " + exception);
+                }
+            });
+        } catch (Exception e) {
+            Log.e("ImageCropError", "Error during cropping: " + e.getMessage());
+
+        }
+
+
         // region  Camera and Gallery Launcher
-        galleryLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), result ->  {
-
-//            Intent intent = new Intent(CommonWebViewActivity.this.getApplicationContext(), UcropperActivity.class);
-//
-//
-//            intent.putExtra("SendImageData",result.toString());
-//
-//            startActivityForResult(intent, SELECT_PICTURE);
-        });
-
-        cameraLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), result -> {
-            if (result) {
-                // binding.imgProfile.setImageURI(imageUri);
-
-//                if(imageUri != null){
-//                    Intent intent = new Intent(CommonWebViewActivity.this.getApplicationContext(),UcropperActivity.class);
-//
-//                    intent.putExtra("SendImageData",imageUri.toString());
-//
-//
-//                    startActivityForResult(intent, CAMERA_REQUEST);
-//                }
-
-            } else {
-                // Handle failure or cancellation
+        cameraLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+            if (success) {
+                startCrop(imageUri); // Start cropping if the image was captured
             }
         });
 
+        galleryLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null) {
+                startCrop(uri); // Start cropping if an image was picked
+            }
+        });
 
         //endregion
 
-        pdfFileLauncher();
+       // pdfFileLauncher();
+
+        setupPdfLauncher();
     }
+
+
+    private void startCrop(Uri imageUri) {
+        // Create CropImageOptions
+        CropImageOptions cropImageOptions = new CropImageOptions();
+        cropImageOptions.guidelines = CropImageView.Guidelines.ON; // Show guidelines during cropping
+        cropImageOptions.autoZoomEnabled = true; // Ensures the image is zoomed for better visibility
+        cropImageOptions.outputCompressFormat = Bitmap.CompressFormat.JPEG; // Set output format to JPEG
+
+        // Create CropImageContractOptions with the imageUri and cropImageOptions
+        CropImageContractOptions options = new CropImageContractOptions(
+                imageUri,
+                cropImageOptions
+        );
+
+        // Launch the crop image activity
+        cropImageLauncher.launch(options);
+    }
+
+
 
     private void startCountDownTimer() {
         countDownTimer = new CountDownTimer(30000, 1000) {
@@ -388,6 +438,8 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
 
         //webView.loadUrl(url);
     }
+
+
 
 
     // region Popup Method Interface
@@ -751,11 +803,15 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
         PHOTO_File = "policyBoss_file" + "_" + document_id;
         Log.i("All Uploding", PHOTO_File);
 
-        if (!checkPermission()) {
+        //tempRahul
+
+        //showCameraGalleryPopUp();
+
+        if (!hasRequiredPermissions()) {
 
             if (checkRationalePermission()) {
                 //Show Information about why you need the permission
-                requestPermission();
+                requestPermissions();
 
             } else {
                 //Previously Permission Request was cancelled with 'Dont Ask Again',
@@ -768,7 +824,7 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
             }
         } else {
 
-            showCamerGalleryPopUp();
+            showCameraGalleryPopUp();
         }
     }
 
@@ -781,11 +837,11 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
         PHOTO_File = "fm_file" + "_" + randomID;
         Log.i("RAISE_TICKET Uploding", PHOTO_File);
 
-        if (!checkPermission()) {
+        if (!hasRequiredPermissions()) {
 
             if (checkRationalePermission()) {
                 //Show Information about why you need the permission
-                requestPermission();
+                requestPermissions();
 
             } else {
                 //Previously Permission Request was cancelled with 'Dont Ask Again',
@@ -798,7 +854,7 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
             }
         } else {
 
-            showCamerGalleryPopUp();
+            showCameraGalleryPopUp();
         }
     }
 
@@ -812,83 +868,93 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
     }
 
     // region permission
-    private boolean checkPermission() {
+    private boolean hasRequiredPermissions() {
 
-        int camera = ActivityCompat.checkSelfPermission(getApplicationContext(), perms[0]);
+        int camera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
 
-        int WRITE_EXTERNAL = ActivityCompat.checkSelfPermission(getApplicationContext(), perms[1]);
-        int READ_EXTERNAL = ActivityCompat.checkSelfPermission(getApplicationContext(), perms[2]);
-        int READ_MEDIA_IMAGE = ActivityCompat.checkSelfPermission(getApplicationContext(), perms[3]);
-
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-            return camera == PackageManager.PERMISSION_GRANTED
-
-                    && READ_MEDIA_IMAGE == PackageManager.PERMISSION_GRANTED;
-
-        }
-        else if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            return camera == PackageManager.PERMISSION_GRANTED
-
-                    && READ_EXTERNAL == PackageManager.PERMISSION_GRANTED;
-        }else{
-            return camera == PackageManager.PERMISSION_GRANTED
-                    &&  WRITE_EXTERNAL == PackageManager.PERMISSION_GRANTED
-                    && READ_EXTERNAL == PackageManager.PERMISSION_GRANTED;
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            int readMediaImages = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES);
+            return camera == PackageManager.PERMISSION_GRANTED &&
+                    readMediaImages == PackageManager.PERMISSION_GRANTED;
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            int readExternal = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            return camera == PackageManager.PERMISSION_GRANTED &&
+                    readExternal == PackageManager.PERMISSION_GRANTED;
+        } else {
+            int writeExternal = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            int readExternal = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            return camera == PackageManager.PERMISSION_GRANTED &&
+                    writeExternal == PackageManager.PERMISSION_GRANTED &&
+                    readExternal == PackageManager.PERMISSION_GRANTED;
         }
     }
+
+
 
     private boolean checkRationalePermission() {
 
-        boolean camera = ActivityCompat.shouldShowRequestPermissionRationale(CommonWebViewActivity.this, perms[0]);
+        boolean camera = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA);
 
-        boolean write_external = ActivityCompat.shouldShowRequestPermissionRationale(CommonWebViewActivity.this, perms[1]);
-        boolean read_external = ActivityCompat.shouldShowRequestPermissionRationale(CommonWebViewActivity.this, perms[2]);
-
-        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            return  camera ||  read_external;
-        }else{
-            return  camera ||write_external   || read_external;
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            boolean readMediaImages = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_MEDIA_IMAGES);
+            return camera || readMediaImages;
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            boolean readExternal = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            return camera || readExternal;
+        } else {
+            boolean writeExternal = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            boolean readExternal = ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            return camera || writeExternal || readExternal;
         }
     }
 
-    private void requestPermission() {
-        ActivityCompat.requestPermissions(this, perms, Constant.PERMISSION_CAMERA_STORAGE_CONSTANT);
+    private void requestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES},
+                    Constant.PERMISSION_CAMERA_STORAGE_CONSTANT
+            );
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    Constant.PERMISSION_CAMERA_STORAGE_CONSTANT
+            );
+        } else {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    Constant.PERMISSION_CAMERA_STORAGE_CONSTANT
+            );
+        }
     }
 
+
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == Constant.PERMISSION_CAMERA_STORAGE_CONSTANT) {
+            if (grantResults.length > 0) {
+                boolean cameraGranted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                boolean storageGranted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        ? grantResults[1] == PackageManager.PERMISSION_GRANTED
+                        : grantResults.length > 1 && grantResults[1] == PackageManager.PERMISSION_GRANTED;
 
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case Constant.PERMISSION_CAMERA_STORAGE_CONSTANT:
-                if (grantResults.length > 0) {
-
-                    //boolean writeExternal = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-
-                    boolean camera = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                    boolean writeExternal = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-                    boolean readExternal = grantResults[2] == PackageManager.PERMISSION_GRANTED;
-                    boolean minSdk29 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
-
-                    if (camera && (writeExternal || minSdk29) && readExternal) {
-
-                        showCamerGalleryPopUp();
-
-                    }
-
+                if (cameraGranted && storageGranted) {
+                    showCameraGalleryPopUp();
+                } else {
+                    Toast.makeText(this, "Camera and Storage permissions are required.", Toast.LENGTH_SHORT).show();
                 }
-                break;
-
-
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
     //endregion
 
     // region Camera Dialog
-    private void showCamerGalleryPopUp() {
+    private void showCameraGalleryPopUp() {
 
         if (alertDialog != null && alertDialog.isShowing()) {
 
@@ -907,7 +973,7 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
         lyCamera = (LinearLayout) dialogView.findViewById(R.id.lyCamera);
         lyGallery = (LinearLayout) dialogView.findViewById(R.id.lyGallery);
         lyPdf = (LinearLayout) dialogView.findViewById(R.id.lyPdf);
-        lyPdf.setVisibility(View.GONE);
+      //  lyPdf.setVisibility(View.VISIBLE);
 
         lyCamera.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -942,25 +1008,124 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
     }
 
     private void showFileChooser() {
-        // Create the ACTION_GET_CONTENT Intent
-//        Intent getContentIntent = FileUtilNew.createGetContentIntent();    // Only For PDF Pls check createGetContentIntent() method
-//        Intent intent = Intent.createChooser(getContentIntent, "Select a file");
-//        startActivityForResult(intent, PICK_PDF_REQUEST);
+             // Initialize intent
+//        Intent intent
+//                = new Intent(Intent.ACTION_GET_CONTENT);
+//        intent.setType("application/pdf");
+//        resultLauncher.launch(intent);
 
-        // Initialize intent
-        Intent intent
-                = new Intent(Intent.ACTION_GET_CONTENT);
-        // set type
-        intent.setType("application/pdf");
-        // Launch intent
-        resultLauncher.launch(intent);
+//        try {
+//            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+//            intent.setType("application/pdf");
+//            intent.addCategory(Intent.CATEGORY_OPENABLE); // Add this to ensure we get openable files
+//            resultLauncher.launch(Intent.createChooser(intent, "Select PDF"));
+//        } catch (Exception e) {
+//            Log.e("FileChooser", "Error launching file chooser", e);
+//            showAlert("Error launching file picker");
+//        }
 
-//        Intent intent = FileUtilNew.getCustomFileChooserIntent(FileUtilNew.DOC, FileUtilNew.PDF, FileUtilNew.XLS,FileUtilNew.TEXT,FileUtilNew.DOCX);
-//
-//        startActivityForResult(intent, PICK_PDF_REQUEST);
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("application/pdf");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
 
+            // Optional: Add multiple configuration options
+            intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            // Create a chooser to show all possible PDF locations
+            Intent chooserIntent = Intent.createChooser(
+                    intent,
+                    "Select a PDF File from Document Only"
+            );
+
+            resultLauncher.launch(chooserIntent);
+        } catch (Exception e) {
+
+            // Optional: Show user-friendly error dialog
+          //  resultLauncher("Unable to open file picker");
+        }
     }
 
+
+
+
+
+    private void setupPdfLauncher() {
+        resultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null && data.getData() != null) {
+                            handleSelectedPdf(data.getData());
+                        } else {
+                            showAlert("No file selected");
+                        }
+                    }
+                });
+    }
+
+    private void handleSelectedPdf(Uri uri) {
+        try {
+
+            if (!FileUtils.isValidPdfFile(this, uri)) {
+                showAlert("Please select a valid PDF file");
+                return;
+            }
+
+            String filePath = FileUtils.getFilePath(this, uri);
+           // String filePath = Utility.getFilePath(this, uri);
+
+            if (filePath == null) {
+                showAlert("Unable to process the selected file!!","Please Choose File From Document Folder Only");
+                return;
+            }
+
+            File file = new File(filePath);
+            if (!file.exists()) {
+                showAlert("Selected file not found");
+                return;
+            }
+
+            if (!FileUtils.isFileLessThan5MB(file)) {
+                showAlert("File is too big, please select a file less than 5MB");
+                return;
+            }
+
+            uploadFileViaPDF(file);
+
+        } catch (Exception e) {
+
+            Log.e("PDF_HANDLER", "Error handling PDF: " + e.getMessage(), e);
+            showAlert("Error processing file");
+        }
+    }
+
+
+    private void uploadFileViaPDF(File file) {
+
+        showDialogMain();
+        try {
+            switch (DOC_TYPE) {
+                case "RAISE":
+                    part = Utility.getMultipartPdf(file, PHOTO_File, "doc_type");
+                    new ZohoController(this).uploadRaiseTicketDocWeb(part, this);
+                    break;
+
+                case "COMMON":
+                    body = Utility.getBodyCommon(this, DocCommonID, DocCommonCrn,
+                            DocCommonType, Docinsurer_id);
+                    part = Utility.getMultipartImage(file, "file_1");
+                    new ZohoController(this).uploadCommonDocuments(part, body, this);
+                    break;
+            }
+        } catch (Exception e) {
+            cancelDialogMain();
+            Log.e("UPLOAD", "Error uploading file: " + e.getMessage(), e);
+            showAlert("Error uploading file");
+        }
+    }
 
     private void pdfFileLauncher(){
 
@@ -989,15 +1154,13 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
                             String path =   Utility.getFilePath(CommonWebViewActivity.this, sUri);
                             File file = new File(path);
 
-
-
                             if (file.exists()) {
 
-                                if(Utility.isFileLessThan5MB(file)){
+                                if (Utility.isFileLessThan5MB(file)) {
 
                                     showAlert("File is too Big, please select a file less than 5mb");
                                     return;
-                                }else {
+                                } else {
 
                                     Log.e("TravellerLog :: ", "Problem creating Image folder");
                                     showDialogMain();
@@ -1026,7 +1189,6 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
                                     }
 
                                 }
-
 
 
                             }
