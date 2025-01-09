@@ -29,6 +29,7 @@ import com.policyboss.policybosspro.utils.Constant
 import com.policyboss.policybosspro.view.syncContact.helper.ContactHelper
 import com.policyboss.policybosspro.view.syncContact.ui.SyncContactActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -43,7 +44,7 @@ class ContactLogWorkManager(
 
 
     private val TAG = "CALL_LOG_CONTACT"
-    private val ProgressStep = 1000
+    private val ProgressStep = 100
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -181,6 +182,7 @@ class ContactLogWorkManager(
 
                 for (i in 0..contactlist!!.size - 1 step ProgressStep) {
 
+                    delay(1000)
                     Log.d(TAG, "CallLog for 1 Contact Number of data jumped ${i}")
 
                     subcontactlist = contactlist!!.filter { it.id > i && it.id <= (ProgressStep + i) }
