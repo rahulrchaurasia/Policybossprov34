@@ -1,10 +1,18 @@
 package com.policyboss.policybosspro.core.response.login
 
 data class OtpLoginResponse(
-    val Msg: OtpLoginMsg? = null,
+    //val Msg: OtpLoginMsg? = null,
+    val Msg: Any? = null,
     val Status: String?
 )
 
+//Custom One For handling both Success and Failure where dat come either object and string
+// so we give our req response to get it in Activity when called by VieModel
+data class OtpLoginResult(
+    val status: String,
+    val mobileNumber: String,
+    val message: String? = null
+)
 data class OtpLoginMsg(
     val Mobile_No: Long ?= 0L ,
     val Name: String ? = "",

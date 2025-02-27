@@ -34,7 +34,54 @@ import kotlinx.coroutines.withContext
 
 /**
  * Created by Rahul on 10/06/2022.
+ *
+ *
  */
+// logic For Sending data to Sever from contactlist size :
+
+//      contactlist.size = 320
+//       ProgressStep = 100
+
+//for (i in 0 until contactlist.size step ProgressStep) {
+
+//        Here's how the loop iterations will work:
+//        Iteration 1:
+//
+//        i = 0
+//        endIndex = min(0 + 100, 320) = 100
+//        contactChunk = contactlist.subList(0, 100)
+//
+//        This gives you elements at indices 0 to 99 (100 elements)
+//
+//        Iteration 2:
+//
+//        i = 100
+//        endIndex = min(100 + 100, 320) = 200
+//        contactChunk = contactlist.subList(100, 200)
+//
+//        This gives you elements at indices 100 to 199 (100 elements)
+//
+//        Iteration 3:
+//
+//        i = 200
+//        endIndex = min(200 + 100, 320) = 300
+//        contactChunk = contactlist.subList(200, 300)
+//
+//        This gives you elements at indices 200 to 299 (100 elements)
+//
+//
+//
+//        Iteration 4:
+//
+//        i = 300
+//        endIndex = min(300 + 100, 320) = 320
+//        contactChunk = contactlist.subList(300, 320)
+//
+//        This gives you elements at indices 300 to 319 (20 elements)
+//
+
+
+
 
 class ContactLogWorkManager(
     val context: Context,
@@ -132,21 +179,65 @@ class ContactLogWorkManager(
             ContactCount = contactlist.size
             Log.d(TAG, "Total Contact Size ${contactlist.size}")
 
+            try{
+
+                getAllContactDetails =  ContactHelper.getContact(context.applicationContext)
+
+                Log.d(TAG, "1> Total contactlist Count: ${contactlist.count()}  2>Total  Row contact Count:${getAllContactDetails.count()}")
+
+//                    var data = Gson().toJson(getAllContactDetails)
+//                    Log.d(Constant.TAG_SAVING_CONTACT_LOG,data )
+//
+
+            }catch (ex :Exception ){
+                Log.d(Constant.TAG_SAVING_CONTACT_LOG,ex.toString() )
+            }
 
             //region ForegroundService and Background
 
-            var remainderProgress = 0
+            var remainderContactProgress = 0
+            var remainderRawProgress = 0
+
+            //var remainderProgress = 0
             var maxProgress = 0
             var currentProgress = 0
             var defaultProgress = 1
-            maxProgress = contactlist!!.size / ProgressStep
 
-            remainderProgress = contactlist!!.size % ProgressStep
-            maxProgress = maxProgress + defaultProgress
-            currentProgress = defaultProgress
-            if (remainderProgress > 0) {
-                maxProgress = maxProgress + 1
+            ////////
+
+            // Calculate total chunks for contactlist
+            val contactChunks = contactlist.size / ProgressStep
+            remainderContactProgress = contactlist.size % ProgressStep
+
+            // Calculate total chunks for raw data
+            val rawChunks = getAllContactDetails.size / ProgressStep
+            remainderRawProgress = getAllContactDetails.size % ProgressStep
+
+            // Calculate maxProgress
+            maxProgress = contactChunks + rawChunks + defaultProgress
+
+            // Add 1 for each remainder
+            if (remainderContactProgress > 0) {
+                maxProgress += 1
             }
+            if (remainderRawProgress > 0) {
+                maxProgress += 1
+            }
+
+            // Initialize currentProgress
+            currentProgress = defaultProgress
+
+
+            //////
+
+//            maxProgress = contactlist!!.size / ProgressStep
+//
+//            remainderProgress = contactlist!!.size % ProgressStep
+//            maxProgress = maxProgress + defaultProgress
+//            currentProgress = defaultProgress
+//            if (remainderProgress > 0) {
+//                maxProgress = maxProgress + 1
+//            }
 
             // Log.d(TAG, "maxProgress ${maxProgress}")
             setForeground(createForegroundInfo(maxProgress, currentProgress, strbody))
@@ -161,64 +252,55 @@ class ContactLogWorkManager(
             //endregion
 
             var subcontactlist: List<ContactlistEntity>
+            var subAllContactDetails :   List<ContactHelper.ModelContact>
 
             if (contactlist != null && contactlist!!.size > 0) {
 
-                try{
-
-                    getAllContactDetails =  ContactHelper.getContact(context.applicationContext)
 
 
-//                    var data = Gson().toJson(getAllContactDetails)
-//                    Log.d(Constant.TAG_SAVING_CONTACT_LOG,data )
-//
-
-                }catch (ex :Exception ){
-                    Log.d(Constant.TAG_SAVING_CONTACT_LOG,ex.toString() )
-                }
-
-
-                // 005 temp commented
-
-                for (i in 0..contactlist!!.size - 1 step ProgressStep) {
-
+                //Mark For Sending contactlist Only
+                for (i in 0 until  contactlist.size step ProgressStep) {
                     delay(1000)
-                    Log.d(TAG, "CallLog for 1 Contact Number of data jumped ${i}")
 
-                    subcontactlist = contactlist!!.filter { it.id > i && it.id <= (ProgressStep + i) }
+                    // Calculate end index for contactlist chunk
+                    val contactEndIndex = minOf(i + ProgressStep, contactlist.size)
+                    val contactChunk = if (i < contactlist.size) {
+                        contactlist.subList(i, contactEndIndex)
+                    } else {
+                        emptyList() // If contactlist is exhausted, send empty list
+                    }
 
+                    // Calculate end index for raw contacts chunk
 
-                    // region calling to server
+                    Log.d(TAG, "contact Processing chunk: ${i}-${contactEndIndex}, contacts=${contactChunk.size} ")
 
-
+                    // Prepare the request entity
                     val contactRequestEntity = ContactLeadRequestEntity(
                         fbaid = tfbaid,
                         ssid = ssid!!,
                         sub_fba_id = tsub_fba_id,
-                        contactlist = subcontactlist,
-                        raw_data = Gson().toJson(getAllContactDetails),
+                        contactlist = contactChunk,
+                        raw_data = "",
                         device_id = deviceID,
                         app_version = appversion
                     )
 
+                  //  Log.d(Constant.TAG_SAVING_CONTACT_LOG, Gson().toJson(rawContactChunk))
 
-                    Log.d(Constant.TAG_SAVING_CONTACT_LOG, Gson().toJson(getAllContactDetails) )
-
-
+                    // Make the API call
                     val resultResp = RetroHelper.api.saveContactLead(url, contactRequestEntity)
 
                     if (resultResp?.isSuccessful == true) {
+                        Log.d(TAG, "Response Done Contact: ${i}")
 
+                        // Update progress
+                        currentProgress += 1
+                        val workProgress = workDataOf(
+                            Constant.CONTACT_LOG_Progress to currentProgress,
+                            Constant.CONTACT_LOG_MAXProgress to maxProgress
+                        )
+                        setProgress(workProgress)
 
-                        Log.d(TAG, "Response Done Contact : ${i}")
-
-                        //region send Notification Progress
-
-
-                        currentProgress = currentProgress + 1
-                        val workProgess = workDataOf(Constant.CONTACT_LOG_Progress to currentProgress,
-                            Constant.CONTACT_LOG_MAXProgress to maxProgress)
-                        setProgress(workProgess)
                         if (currentProgress < maxProgress) {
                             setForeground(
                                 createForegroundInfo(
@@ -227,8 +309,70 @@ class ContactLogWorkManager(
                                     strbody = strbody
                                 )
                             )
+                        }
 
+                    } else {
+                        Log.d(TAG, resultResp.toString())
+                    }
+                }
+
+
+                //Mark For Sending Raw Data Only
+                for (i in 0 until  getAllContactDetails.size step ProgressStep) {
+
+                    delay(1000)
+
+
+
+                    // Calculate end index for raw contacts chunk
+                    val rawEndIndex = minOf(i + ProgressStep, getAllContactDetails.size)
+                    val rawContactChunk = if (i < getAllContactDetails.size) {
+                        getAllContactDetails.subList(i, rawEndIndex)
+                    } else {
+                        emptyList() // If raw contacts are exhausted, send empty list
+                    }
+
+                    Log.d(TAG, "Raw Data Processing chunk: ${i}-${rawEndIndex}, rawData=${rawContactChunk.size}")
+
+                    // Prepare the request entity
+                    val contactRequestEntity = ContactLeadRequestEntity(
+                        fbaid = tfbaid,
+                        ssid = ssid!!,
+                        sub_fba_id = tsub_fba_id,
+                        contactlist = null,
+                        raw_data = Gson().toJson(rawContactChunk),
+                        device_id = deviceID,
+                        app_version = appversion
+                    )
+
+                    Log.d(Constant.TAG_SAVING_CONTACT_LOG, Gson().toJson(rawContactChunk))
+
+                    // Make the API call
+                    val resultResp = RetroHelper.api.saveContactLead(url, contactRequestEntity)
+
+                    if (resultResp?.isSuccessful == true) {
+                        Log.d(TAG, "Response Done Contact: ${i}")
+
+                        // Update progress
+                        currentProgress += 1
+                        val workProgress = workDataOf(
+                            Constant.CONTACT_LOG_Progress to currentProgress,
+                            Constant.CONTACT_LOG_MAXProgress to maxProgress
+                        )
+                        setProgress(workProgress)
+
+                        if (currentProgress < maxProgress) {
+                            // Update foreground with progress
+                            setForeground(
+                                createForegroundInfo(
+                                    maxProgress = maxProgress,
+                                    progress = currentProgress,
+                                    strbody = strbody
+                                )
+                            )
                         } else {
+
+                            // Final success message after both loops complete
                             setForeground(
                                 createForegroundInfo(
                                     maxProgress = maxProgress,
@@ -236,25 +380,11 @@ class ContactLogWorkManager(
                                     strbody = strResultbody
                                 )
                             )
-
                         }
-                        //endregion
-                        // delay(8000)
-
-                    }
-                    else{
-
+                    } else {
                         Log.d(TAG, resultResp.toString())
                     }
-
-
-                    //endregion
-
-
-
-
                 }
-
 
 
 

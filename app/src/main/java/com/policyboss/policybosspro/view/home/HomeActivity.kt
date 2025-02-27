@@ -69,6 +69,7 @@ import com.policyboss.policybosspro.utils.CoroutineHelper
 import com.policyboss.policybosspro.utils.FeedbackHelper
 import com.policyboss.policybosspro.utils.FirebasePushNotification.AccessToken
 import com.policyboss.policybosspro.utils.NetworkUtils
+import com.policyboss.policybosspro.utils.getLocalIpAddress
 import com.policyboss.policybosspro.utils.hideKeyboard
 import com.policyboss.policybosspro.utils.showSnackbar
 import com.policyboss.policybosspro.utils.showToast
@@ -361,8 +362,10 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         dashboardEntity?.let { entity ->
             try {
 
-                var ipaddress = "0.0.0.0"
+                var ipaddress = getLocalIpAddress()?: ""
                 val parent_ssid = ""
+                val subSSID = prefsManager.getSUBUserSSId()
+                val subFBAID = prefsManager.getSUBUserFBAID()
                 val deviceId = Utility.getDeviceID(this@HomeActivity)
                 val appVersion = "policyboss-${BuildConfig.VERSION_NAME}"
 
@@ -373,7 +376,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
 
 
-                        motorUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid)
+                        motorUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid,subSSID,subFBAID)
 
                         openCommonWebView(
                             motorUrl,
@@ -392,7 +395,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                         // Kotak
                         var kotakUrl = prefsManager.getUserConstantResponse()?.MasterData?.EliteKotakUrl ?: ""
-                        kotakUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid)
+                        kotakUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid ,subSSID,subFBAID)
 
                         openCommonWebView(
                             kotakUrl,
@@ -410,7 +413,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                         // health
                         var healthUrl = prefsManager.getHealthurl()
-                        healthUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid)
+                        healthUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid ,subSSID,subFBAID)
 
                         openCommonWebView(
                             healthUrl,
@@ -428,7 +431,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                         //bike
                         var bikeUrl = prefsManager.getTwoWheelerUrl()
-                        bikeUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid)
+                        bikeUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid ,subSSID,subFBAID)
 
                         openCommonWebView(
                             bikeUrl,
@@ -446,7 +449,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                         //bike
                         var cvUrl = prefsManager.getCVUrl()
-                        cvUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid)
+                        cvUrl += buildUrlAppend(ipaddress, deviceId, appVersion, entity.productId, parent_ssid ,subSSID,subFBAID)
 
                         openCommonWebView(
                             cvUrl,
@@ -510,22 +513,26 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                                     val userConstantsData = prefsManager.getDashboardarray()
                                     for (dashboardItem in userConstantsData) {
                                         if (dashboardItem.ProdId?.toInt() == entity.productId) {
-                                            dynamicUrl = dashboardItem.url ?: ""
+                                            //dynamicUrl = dashboardItem.url ?: ""
+                                            //005 temp
+                                            dynamicUrl = dashboardItem.url.replace("&sub_fba_id=0", "") ?: ""
+
                                             break
                                         }
                                     }
 
                                     if (dynamicUrl.isNotEmpty()) {
                                         ipaddress = try {
-                                            "" // Add logic for fetching ip address here
+                                            getLocalIpAddress()?: ""// Add logic for fetching ip address here
                                         } catch (e: Exception) {
                                             "0.0.0.0"
                                         }
 
-                                        trackMainMenuEvent(entity.productName)
-
-                                        val append = "&ip_address=$ipaddress&mac_address=$ipaddress" +
-                                                "&app_version=$appVersion&device_id=$deviceId&product_id=${entity.productId}&login_ssid=$parent_ssid"
+                                       //005 temp
+                                        val append = "&sub_fba_id=$subFBAID" +
+                                                "&ip_address=$ipaddress&mac_address=$ipaddress" +
+                                                "&app_version=$appVersion&device_id=$deviceId&product_id=${entity.productId}&login_ssid=$parent_ssid" +
+                                                "&sub_ss_id=$subSSID"
                                         dynamicUrl += append
 
 
@@ -560,7 +567,18 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             }
         }
     }
-    private fun buildUrlAppend(ipaddress: String, deviceId: String, appVersion: String, productId: Int, parentSsid: String): String {
+    private fun buildUrlAppend(ipaddress: String, deviceId: String, appVersion: String, productId: Int, parentSsid: String = "",subSSID : String  = "0",subFBAID : String = "0" ): String {
+        return "&sub_fba_id=$subFBAID" +
+               "&ip_address=$ipaddress&mac_address=$ipaddress" +
+                "&app_version=$appVersion" +
+                "&device_id=$deviceId" +
+                "&product_id=$productId&login_ssid=$parentSsid" +
+                "&sub_ss_id=$subSSID"
+
+    }
+
+    //005 temp
+    private fun buildUrlAppend1(ipaddress: String, deviceId: String, appVersion: String, productId: Int, parentSsid: String): String {
         return "&ip_address=$ipaddress&mac_address=$ipaddress" +
                 "&app_version=$appVersion" +
                 "&device_id=$deviceId" +
@@ -653,11 +671,11 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             if (menuItem.itemId == sequence) {
                 val appendMenu = "&ss_id=${prefsManager.getSSID()}" +
                         "&fba_id=${prefsManager.getFBAID()}" +
-                        "&sub_fba_id=" +
+                        "&sub_fba_id=${prefsManager.getSUBUserFBAID()}" +
                         "ip_address=&mac_address=" +
                         "&app_version=policyboss-${BuildConfig.VERSION_NAME}" +
                         "&device_id=${Utility.getDeviceID(this@HomeActivity)}" +
-                        "&login_ssid="
+                        "&login_ssid=&sub_ss_id=${prefsManager.getSUBUserSSId()}"
 
                 val menuDetail = "${menuItemEntity.link}$appendMenu"
 
@@ -996,6 +1014,9 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
     private fun deeplinkHandle() {
         val deeplinkValue = prefsManager.getDeepLink()
 
+        val subSSID = prefsManager.getSUBUserSSId()
+        val subFBAID = prefsManager.getSUBUserFBAID()
+
         if (deeplinkValue != null && deeplinkValue.isNotEmpty()) {
 
             try {
@@ -1015,7 +1036,9 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                                     "&app_version=" + prefsManager.getAppVersion() +
                                     "&device_code=" + Utility.getDeviceID(this@HomeActivity) +
                                     "&ssid=" + prefsManager.getSSID() +
-                                    "&fbaid=" + prefsManager.getFBAID())
+                                    "&fbaid=" + prefsManager.getFBAID() +
+                                     "&sub_fba_id=${subFBAID}" +
+                                     "&sub_ss_id=${subSSID}" )
                             putExtra("NAME", "Posp Enrollment")
                             putExtra("TITLE", "Posp Enrollment")
                         }
@@ -1026,15 +1049,15 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                     "505" -> FeedbackHelper.showFeedbackDialog(this)
                     else -> {
                         val ipAddress = try {
-                            ""  // Replace with actual logic to get IP address
+                            getLocalIpAddress()?: ""  // Replace with actual logic to get IP address
                         } catch (e: Exception) {
                             "0.0.0.0"
                         }
 
                         val append = "&ss_id=${prefsManager.getSSID()}&fba_id=${prefsManager.getFBAID()}" +
-                                "&sub_fba_id=&ip_address=$ipAddress&mac_address=$ipAddress" +
-                                "&app_version=policyboss-${BuildConfig.VERSION_NAME}&device_id=${Utility.getDeviceID(this)}" +
-                                "&login_ssid="
+                                "&sub_fba_id=${subFBAID}&ip_address=$ipAddress&mac_address=$ipAddress" +
+                                "&app_version=${prefsManager.getAppVersion()}&device_id=${Utility.getDeviceID(this)}" +
+                                "&login_ssid=&sub_ss_id=${subSSID}"
 
                         // Update deeplinkValue with appended parameters
                         val updatedDeeplinkValue = deeplinkValue + append
@@ -1151,6 +1174,10 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
     }
 
     private fun navigateViaNotification(prdID: String, webURL: String, title: String) {
+
+        val subSSID = prefsManager.getSUBUserSSId()
+        val subFBAID = prefsManager.getSUBUserFBAID()
+
         when (prdID) {
             "WB" -> {
                 startActivity(
@@ -1170,15 +1197,15 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                 val ipAddress: String = try {
                     // You can replace the following line with the actual way to retrieve the IP address if needed
-                    "" // Assuming you want to leave it empty as per your Java code
+                    getLocalIpAddress() ?: ""// Assuming you want to leave it empty as per your Java code
                 } catch (io: Exception) {
                     "0.0.0.0"
                 }
 
                 // Construct the URL with additional parameters
                 val append = "&ss_id=${prefsManager.getSSID()}&fba_id=${prefsManager.getFBAID()}" +
-                        "&sub_fba_id=&ip_address=$ipAddress&mac_address=$ipAddress&app_version=${prefsManager.getAppVersion()}" +
-                        "&device_id=${prefsManager.getDeviceID()}&product_id=$prdID&login_ssid="
+                        "&sub_fba_id=${subFBAID}&ip_address=$ipAddress&mac_address=$ipAddress&app_version=${prefsManager.getAppVersion()}" +
+                        "&device_id=${prefsManager.getDeviceID()}&product_id=$prdID&login_ssid=&sub_ss_id=${subSSID}"
 
                 val updatedWebURL = webURL + append
 

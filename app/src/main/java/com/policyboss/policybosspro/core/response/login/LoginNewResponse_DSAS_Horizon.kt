@@ -9,7 +9,8 @@ data class LoginNewResponse_DSAS_Horizon(
     val product: String ?,
     val status: String ?,
     val user_type: String ?,
-    val Ss_Id: String ?
+    val Ss_Id: String ?,
+    val SUB_USER : SUB_USER? = null,  //005 temp
 )
 
 data class EMP(
@@ -86,6 +87,13 @@ data class POSP_USER(
 
     var  Mobile_No: String = "",
     var Erp_Id: String="",
+)
+
+data class SUB_USER(
+
+    val Ss_Id: Long? = null,
+    val Sub_FBA_ID: Long? = null
+
 )
 
 data class DEVICE(

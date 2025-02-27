@@ -244,17 +244,22 @@ object ContactHelper {
 
                 //region Add Phone Number in Main List
                 lateinit var modeContact : ModelContact
+                var idCounter = 0  // Add a counter to increment IDs
 
                 contactNameMapList.forEach{
+                    idCounter++  // Increment the counter
 
                     modeContact =  ModelContact(displayName = it.key)  // Get Display name as key From Phone Number
 
                     modeContact.givenName = it.value[0].givenName
                     modeContact.middleName = it.value[0].middleName
                     modeContact.familyName = it.value[0].familyName
+                    modeContact.id = idCounter
 
                     deviceData.add(modeContact)
                 }
+
+
 
 
                 deviceData.forEach{ myData ->
@@ -861,7 +866,8 @@ object ContactHelper {
     //region Molel Data
         data class ModelContact(
             var displayName: String? = "",
-        ){
+            var id: Int = 0 // Add this field for auto-incrementing ID
+    ){
 
             var givenName: String = ""
             var middleName : String = ""

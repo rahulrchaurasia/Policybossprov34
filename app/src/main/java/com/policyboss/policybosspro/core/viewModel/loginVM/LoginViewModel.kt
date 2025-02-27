@@ -9,6 +9,7 @@ import com.policyboss.policybosspro.core.response.login.AuthLoginResponse
 import com.policyboss.policybosspro.core.response.login.DevicetokenResponse
 import com.policyboss.policybosspro.core.response.login.LoginNewResponse_DSAS_Horizon
 import com.policyboss.policybosspro.core.response.login.OtpLoginResponse
+import com.policyboss.policybosspro.core.response.login.OtpLoginResult
 import com.policyboss.policybosspro.core.response.login.OtpVerifyResponse
 import com.policyboss.policybosspro.core.response.login.UserNewSignUpResponse
 import com.policyboss.policybosspro.facade.PolicyBossPrefsManager
@@ -39,6 +40,8 @@ class LoginViewModel @Inject constructor(
     private var ssid: String = ""
     private var OTP_mobNo: String = ""
 
+    private var otpLoginResult: OtpLoginResult ? = null
+
     private fun setSsid(newSsid: String) {
         ssid = newSsid
     }
@@ -46,6 +49,15 @@ class LoginViewModel @Inject constructor(
     fun getSsid(): String {
         return ssid
     }
+
+    /////handle OTP response
+
+    private fun setOTPReqLoginResult(_otpLoginResult: OtpLoginResult) {
+        otpLoginResult = _otpLoginResult
+    }
+
+    fun getOTPReqLoginResult(): OtpLoginResult? = otpLoginResult
+    ////
 
     fun getOtpMobileNo(): String {
         return OTP_mobNo
@@ -232,10 +244,12 @@ class LoginViewModel @Inject constructor(
     }
 
 
-    fun getotpLoginHorizon(login_id: String) = viewModelScope.launch {
+    fun getotpLoginHorizon(login_id: String,deviceID : String, ipAddress : String) = viewModelScope.launch {
 
         var body = HashMap<String, String>()
         body.put("login_id", login_id)
+        body.put("device_id", deviceID)
+        body.put("ip_address", ipAddress)
 
         otpLoginMutuableStateFlow.value = APIState.Loading()
 
@@ -246,19 +260,53 @@ class LoginViewModel @Inject constructor(
             }
             .collect{ data ->
                 if (data.isSuccessful){
-                    if(data.body()?.Status?.uppercase().equals("SUCCESS"))
-                    {
-                        //loginPrefManager.saveLoginOTPResponse(data.body()?.Msg)
-                        otpLoginMutuableStateFlow.value = APIState.Success(data = data.body())
+                    val responseBody= data.body()
+
+                    responseBody?.let { response ->
+
 
                         //Set SSID and After Verify mob no. Call dsasLogin Horizon Details using SsID
-                        setSsid(data.body()?.Msg?.Ss_Id?.toString() ?:"")
-                        OTP_mobNo = data.body()?.Msg?.Mobile_No?.toString() ?:""
-                    }
-                    else{
+//                        setSsid(data.body()?.Msg?.Ss_Id?.toString() ?:"")
+//                        OTP_mobNo = data.body()?.Msg?.Mobile_No?.toString() ?:""
 
-                        otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.ErrorMessage)
-                    }
+                       val otpLoginResult  =    when (val msg = response.Msg) {
+                            is Map<*, *> -> {
+                                val mobileNo = msg["Mobile_No"] as? String ?: ""
+                                val ssid = (msg["Ss_Id"] as? Double)?.toLong()?.toString() ?: ""
+                                setSsid(ssid.toString().trim())
+                                OTP_mobNo = mobileNo.toString().trim()
+                                val status = response.Status ?: "FAIL"
+                                OtpLoginResult(
+                                    status = status,
+                                    mobileNumber = mobileNo,
+                                    message = ""
+                                )
+                            }
+                            is String -> {
+                                //Note : in Api when "Status" is string come than status is byDefault "fail"  we can also write below static FAIL
+                                //so mobileNumber on fail case is empty
+                                OtpLoginResult(status = response.Status ?: "FAIL",mobileNumber ="", message = msg)
+                            }
+                            else -> {
+                                OtpLoginResult(status = "FAIL",mobileNumber ="", message = Constant.ErrorMessage)
+                            }
+                        }
+                          //set here the data which we get in Activity for handling both success and failure
+                          setOTPReqLoginResult(_otpLoginResult = otpLoginResult)
+                          otpLoginMutuableStateFlow.value = APIState.Success(data = data.body())
+                          // regionNote : No need to filter on the base of Success and fail  status we need to take action on both case
+//                    if(data.body()?.Status?.uppercase().equals("SUCCESS"))
+//                    { otpLoginMutuableStateFlow.value = APIState.Success(data = data.body()) }
+//                    else{
+//                        otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.ErrorMessage)
+//                    }
+                          //endregion
+                    } ?: run{
+
+                        otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.SeverUnavaiable)
+
+                      }
+
                 }
                 else
                 {
@@ -269,7 +317,6 @@ class LoginViewModel @Inject constructor(
 
 
     }
-
 
     fun  otpVerifyHorizon(otp : String, mobileno : String) = viewModelScope.launch {
 

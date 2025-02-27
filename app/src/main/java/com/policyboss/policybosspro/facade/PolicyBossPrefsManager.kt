@@ -9,6 +9,7 @@ import com.policyboss.policybosspro.core.response.login.EMP
 import com.policyboss.policybosspro.core.response.login.LoginNewResponse_DSAS_Horizon
 import com.policyboss.policybosspro.core.response.login.OtpLoginMsg
 import com.policyboss.policybosspro.core.response.login.POSP
+import com.policyboss.policybosspro.core.response.login.SUB_USER
 import com.policyboss.policybosspro.core.response.master.dynamicDashboard.MenuMasterResponse
 import com.policyboss.policybosspro.core.response.master.userConstant.Dashboardarray
 import com.policyboss.policybosspro.core.response.master.userConstant.UserConstantEntity
@@ -339,6 +340,49 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
 
         return response?.Ss_Id?:"0"
     }
+
+    //005 temp
+    // region Mark : Added :SUB_USER object field to add in webView url
+    private fun getSUBUser() : SUB_USER? {
+
+        val response = getLoginHorizonResponse()
+
+        return response?.SUB_USER
+    }
+
+     //SubUser SUB_SSID
+    fun getSUBUserSSId(): String {
+
+         val response = getLoginHorizonResponse()
+         val userType = response?.user_type ?: ""
+
+
+         return if (userType == "POSP") {
+             getSUBUser()?.Ss_Id?.toString() ?: "0"
+         } else {
+             "0"
+         }
+
+
+    }
+
+    //SubUser SUB_FBAID
+    fun getSUBUserFBAID(): String {
+
+
+        val response = getLoginHorizonResponse()
+        val userType = response?.user_type ?: ""
+
+
+        return if (userType == "POSP") {
+            getSUBUser()?.Sub_FBA_ID?.toString() ?: "0"
+        } else {
+            "0"
+        }
+
+    }
+    //endregion
+
 
 
 
@@ -692,24 +736,37 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
         return   getUserConstantResponse()?.MasterData?.RaiseTickitUrl?:""
     }
 
+    //005 temp
     fun getFourWheelerUrl(): String {
 
-        return   getUserConstantResponse()?.MasterData?.FourWheelerUrl?:""
+        //return   getUserConstantResponse()?.MasterData?.FourWheelerUrl?:""
+
+        val url = getUserConstantResponse()?.MasterData?.FourWheelerUrl ?: ""
+        return url.replace("&sub_fba_id=0", "")
     }
 
     fun getTwoWheelerUrl(): String {
 
-        return   getUserConstantResponse()?.MasterData?.TwoWheelerUrl?:""
+        //return   getUserConstantResponse()?.MasterData?.TwoWheelerUrl?:""
+
+        val url = getUserConstantResponse()?.MasterData?.TwoWheelerUrl?:""
+        return url.replace("&sub_fba_id=0", "")
     }
 
     fun getCVUrl(): String {
 
-        return   getUserConstantResponse()?.MasterData?.CVUrl?:""
+       // return   getUserConstantResponse()?.MasterData?.CVUrl?:""
+
+        val url = getUserConstantResponse()?.MasterData?.CVUrl?:""
+        return url.replace("&sub_fba_id=0", "")
     }
 
     fun getHealthurl(): String {
 
-        return   getUserConstantResponse()?.MasterData?.healthurl?:""
+       // return   getUserConstantResponse()?.MasterData?.healthurl?:""
+
+        val url = getUserConstantResponse()?.MasterData?.healthurl?:""
+        return url.replace("&sub_fba_id=0", "")
     }
 
     fun getInvestmentEnabled(): String {

@@ -28,7 +28,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.messaging.FirebaseMessaging
 import com.policyboss.policybosspro.BaseActivity
 import com.policyboss.policybosspro.BuildConfig
 import com.policyboss.policybosspro.R
@@ -45,7 +44,9 @@ import com.policyboss.policybosspro.utils.AppSignatureHashHelper
 import com.policyboss.policybosspro.utils.Constant
 import com.policyboss.policybosspro.utils.NetworkUtils.Companion.isNetworkAvailable
 import com.policyboss.policybosspro.utils.ValidationUtil
+import com.policyboss.policybosspro.utils.getLocalIpAddress
 import com.policyboss.policybosspro.utils.hideKeyboard
+import com.policyboss.policybosspro.utils.showAlert
 import com.policyboss.policybosspro.utils.showKeyboard
 import com.policyboss.policybosspro.utils.showToast
 import com.policyboss.policybosspro.view.WebView.PrivacyWebViewActivity
@@ -304,8 +305,33 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         if (Build.VERSION.SDK_INT >= 34 && getApplicationInfo().targetSdkVersion >= 34) {
             registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
         } else {
+            @Suppress("DEPRECATION")
             registerReceiver(smsReceiver, intentFilter)
         }
+
+
+//        when {
+//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+//                // Android 14 (API 34) and above
+//                registerReceiver(
+//                    smsReceiver,
+//                    intentFilter,
+//                    Context.RECEIVER_NOT_EXPORTED  // Use NOT_EXPORTED since this is for SMS retrieval
+//                )
+//            }
+//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+//                // Android 13 (API 33)
+//                registerReceiver(
+//                    smsReceiver,
+//                    intentFilter,
+//                    Context.RECEIVER_EXPORTED
+//                )
+//            }
+//            else -> {
+//                // Below Android 13
+//                registerReceiver(smsReceiver, intentFilter)
+//            }
+//        }
     }
 
 
@@ -784,6 +810,35 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
     }
 
 
+    fun loginFailVerifyAlert(
+     strMessage : String
+    ) {
+        val builder = AlertDialog.Builder(this@LoginActivity, R.style.CustomDialog);
+        val btnClose: Button
+        val txtHdr: TextView
+        val txtMessage : TextView
+        val inflater = this.layoutInflater
+        val dialogView = inflater.inflate(R.layout.layout_login_device_verify, null)
+        builder.setView(dialogView)
+        val alertDialog = builder.create()
+
+        btnClose = dialogView.findViewById(R.id.btnClose)
+        txtMessage = dialogView.findViewById(R.id.txtMessage)
+
+        txtHdr = dialogView.findViewById(R.id.txtHdr)
+        // txtHdr.text = "" + strhdr
+        //  txtMessage.text = "" + strBody
+
+
+        txtMessage.setText(strMessage)
+
+        btnClose.setOnClickListener {
+            alertDialog.dismiss()
+        }
+        alertDialog.setCancelable(false)
+        alertDialog.show()
+
+    }
 
     private fun pasteOTP( strOTP : String) {
 
@@ -1014,13 +1069,27 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
 
                             hideLoading()
-                            if (it != null) {
 
-                                var mobileNo = it.data?.Msg?.Mobile_No?:0
-                                // showAlert(prefManager.getSSIDByOTP())
+                                //var mobileNo = it.data?.Msg?.Mobile_No?:0
+                            // showAlert(prefManager.getSSIDByOTP())
+                                val otpResult = loginViewModel.getOTPReqLoginResult()
 
-                                showOTPDialog(mobNo = mobileNo.toString())
+                            if (otpResult?.status.equals("SUCCESS",true)){
+
+                                showOTPDialog(mobNo = loginViewModel.getOtpMobileNo())
+                            }else{
+
+
+                                //005 temp
+                               // showAlert(msg = otpResult?.message?:"",title = "PolicyBoss Pro")
+
+                                 loginFailVerifyAlert(strMessage =  otpResult?.message?: "")
+
+
                             }
+
+
+
                         }
 
                         is APIState.Failure -> {
@@ -1360,7 +1429,13 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
                 }else{
 
                     if(binding.includeLoginNew.etEmail.text!!.isNotBlank() && selectedLogin == LoginOption.OTP){
-                        loginViewModel.getotpLoginHorizon(binding.includeLoginNew.etEmail.text!!.trim().toString())
+                        //have to added in 2025 project 005 temp
+                        val  deviceID = Utility.getDeviceID(this@LoginActivity)
+                        val ipAddress = getLocalIpAddress()
+                        loginViewModel.getotpLoginHorizon(
+                            login_id =  binding.includeLoginNew.etEmail.text!!.trim().toString(),
+                            deviceID = deviceID ,
+                            ipAddress = getLocalIpAddress()?: "")
 
                     }
                     else if(binding.includeLoginNew.etEmail.text!!.isNotBlank() && selectedLogin == LoginOption.Password){
