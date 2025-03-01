@@ -141,6 +141,10 @@ class SplashScreenActivity : AppCompatActivity() {
                 Log.i("Sync", "We have link")
                 var deepLink: Uri? = null
 
+
+                //note: For Testing we have added below method :  testDeeplink()
+                // testDeeplink()
+
                 // Check if we received a dynamic link from Firebase
                 if (pendingDynamicLinkData != null) {
                     deepLink = pendingDynamicLinkData.link
@@ -179,6 +183,11 @@ class SplashScreenActivity : AppCompatActivity() {
             }
     }
 
+    private fun testDeeplink(){
+
+        val deeplinkUrl =  "https://www.policyboss.com/UI22/sync?product_id=506"
+        prefManager.setDeeplink(deeplinkUrl)
+    }
 
     private fun getToken(){
 

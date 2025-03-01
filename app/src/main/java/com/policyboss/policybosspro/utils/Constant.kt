@@ -85,6 +85,8 @@ object Constant {
     const val SHARE_WHATSAPP = "sharewhatsapp"
 
     const val  PRODUCT_ID = "salesProductID"
+
+    const val  Deeplink_PRODUCT_ID = "deeplinksalesProductID"
     const val DOC_DATA = "docData"
     const val POSP_IMAGE = "POSPIMAGE"
     const val FBA_IMAGE = "FBAIMAGE"

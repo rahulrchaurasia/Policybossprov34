@@ -1017,7 +1017,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         val subSSID = prefsManager.getSUBUserSSId()
         val subFBAID = prefsManager.getSUBUserFBAID()
 
-        if (deeplinkValue != null && deeplinkValue.isNotEmpty()) {
+        if (!deeplinkValue.isNullOrEmpty()) {
 
             try {
                 val myUri = Uri.parse(deeplinkValue)
@@ -1046,7 +1046,82 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                     }
                     "503" -> startActivity(Intent(this, NotificationActivity::class.java))
                     "504" -> startActivity(Intent(this, SalesMaterialActivity::class.java))
-                    "505" -> FeedbackHelper.showFeedbackDialog(this)
+                    "505" -> {
+
+                        //Sync Contact Dashboard
+                        startLeadDetailActivity()
+                    }
+                    "506" -> {
+
+                        //RaiseTicket Handling
+                        val intent = Intent(this@HomeActivity, CommonWebViewActivity::class.java).apply {
+                            putExtra("URL", prefsManager.getRaiseTickitUrl() +
+                                    "&mobile_no=" + prefsManager.getMobileNo() +
+                                    "&UDID=" + prefsManager.getUserId() +
+                                    "&app_version=" + prefsManager.getAppVersion() +
+                                    "&device_code=" + Utility.getDeviceID(this@HomeActivity) +
+                                    "&ssid=" + prefsManager.getSSID() +
+                                    "&fbaid=" + prefsManager.getFBAID())
+                            putExtra("NAME", "RAISE_TICKET")
+                            putExtra("TITLE", "RAISE TICKET")
+                        }
+                        startActivity(intent)
+                    }
+                    "507" -> {
+                        //manage support Dialog
+                        if (!NetworkUtils.isNetworkAvailable(this)) {
+                            this.showSnackbar(binding.root,getString(R.string.noInternet))
+                            return
+                        }
+                        prefsManager.getUserConstantEntity()?.let { user ->
+                            if (user.MangMobile != null && user.ManagName != null) {
+                                if (callingDetailDialog?.isShowing == true) {
+                                    return
+                                } else {
+                                    //************* call User Details Api //*************
+                                    viewModel.getUserCallingDetail()
+                                }
+                            }
+                        }
+                    }
+                    "508" -> {
+                        //Calculator Activity
+                        startActivity(Intent(this, IncomePotentialActivity::class.java))
+                    }
+                    "551" ->{
+                        // SalesMaterial : Motor Insurance
+
+                        val intent = Intent(this, SalesMaterialActivity::class.java).apply {
+                            putExtra(Constant.Deeplink_PRODUCT_ID, "2") // Ensure "2" is a valid String
+                        }
+                        startActivity(intent)
+
+                    }
+                    "552" ->{
+                        // SalesMaterial : "Health Insurance
+                        val intent = Intent(this, SalesMaterialActivity::class.java).apply {
+                            putExtra(Constant.Deeplink_PRODUCT_ID, "1") // Ensure "2" is a valid String
+                        }
+                        startActivity(intent)
+
+                    }
+                    "553" ->{
+                        // SalesMaterial : "Term Insurance"
+                        val intent = Intent(this, SalesMaterialActivity::class.java).apply {
+                            putExtra(Constant.Deeplink_PRODUCT_ID, "6") // Ensure "2" is a valid String
+                        }
+                        startActivity(intent)
+
+                    }
+                    "554" ->{
+                        // SalesMaterial : "Travel Insurance"
+
+                        val intent = Intent(this, SalesMaterialActivity::class.java).apply {
+                            putExtra(Constant.Deeplink_PRODUCT_ID, "8") // Ensure "2" is a valid String
+                        }
+                        startActivity(intent)
+
+                    }
                     else -> {
                         val ipAddress = try {
                             getLocalIpAddress()?: ""  // Replace with actual logic to get IP address
