@@ -155,9 +155,14 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
 
     fun setFirstTimeLaunch(isFirstTime: Boolean) {
         editor.putBoolean(IS_FIRST_TIME_LAUNCH, isFirstTime).apply()
+       // Log.d(Constant.TAG, "Setting isFirstTimeLaunch to: $isFirstTime")
+
+
     }
 
     fun isFirstTimeLaunch(): Boolean {
+
+       // Log.d(Constant.TAG, "Getting isFirstTimeLaunch : ${pref.getBoolean(IS_FIRST_TIME_LAUNCH, true)}")
         return pref.getBoolean(IS_FIRST_TIME_LAUNCH, true)
     }
 
@@ -255,12 +260,12 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
     }
 
 
-    fun setEnableProAddSubUserUrl(proSignupUrl: String) {
-        editor.putString(IS_ENABLE_PRO_ADDSUBUSER_URL, proSignupUrl).apply()
-    }
 
-    fun getEnableProAddSubUserUrl(): String? {
-        return pref.getString(IS_ENABLE_PRO_ADDSUBUSER_URL, "")
+    //MARK: NEW functionality 'ADD SUB USER' Added
+    fun getEnableProAddSubUserUrl(): String {
+
+        return getUserConstantResponse()?.MasterData?.enable_pro_Addsubuser_url.orEmpty()
+
     }
 
     // Notification Methods
@@ -341,9 +346,9 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
         return response?.Ss_Id?:"0"
     }
 
-    //005 temp
+    //New Added
     // region Mark : Added :SUB_USER object field to add in webView url
-    private fun getSUBUser() : SUB_USER? {
+    public fun getSUBUser() : SUB_USER? {
 
         val response = getLoginHorizonResponse()
 
@@ -365,6 +370,21 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
 
 
     }
+
+    fun getSUBUserName(): String {
+        val firstName = getSUBUser()?.First_Name ?: ""
+        val lastName = getSUBUser()?.Last_Name ?: ""
+
+        return "$firstName $lastName".trim()
+    }
+
+    fun getSUBUserEmailID(): String {
+
+        return (getSUBUser()?.Email_ID.toString()?: "")
+
+
+    }
+
 
     //SubUser SUB_FBAID
     fun getSUBUserFBAID(): String {
@@ -423,7 +443,7 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
             }
         }
 
-        Log.d("User Email ID.",erpIDID?:"0")
+        Log.d("User Erp_Id ID.",erpIDID?:"0")
         return  erpIDID?:"0"
 
     }
@@ -562,6 +582,7 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
         return response?.user_type?:""
 
     }
+
     fun getUserId() : String {
 
         val response = getLoginHorizonResponse()
@@ -589,6 +610,7 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
 
         return "0"
     }
+
     fun getappVersionHorizon() : String {
 
         val response = getLoginHorizonResponse()
@@ -681,17 +703,6 @@ class PolicyBossPrefsManager @Inject constructor(@ApplicationContext context: Co
 
 
 
-
-    /////
-
-    fun setEnablePro_ADDSUBUSERurl(ProSignupurl: String) {
-        editor.putString(IS_ENABLE_PRO_ADDSUBUSER_URL, ProSignupurl)
-        editor.apply()
-    }
-
-    fun getEnablePro_ADDSUBUSERurl(): String {
-        return pref.getString(IS_ENABLE_PRO_ADDSUBUSER_URL, "") ?: ""
-    }
 
 
 

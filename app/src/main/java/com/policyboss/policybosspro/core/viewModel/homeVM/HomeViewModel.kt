@@ -168,38 +168,46 @@ class HomeViewModel @Inject constructor(
         // Retrieve the dashboard data from prefManager {api :get-dynamic-app-pb }
         val dashBoardItemEntities = prefManager.getMenuDashBoard()?.MasterData?.Dashboard
 
+        val isSubUserExist = prefManager.getSUBUserSSId()  //if isSubUserExist has value means it exixt
+
+
+
         dashBoardItemEntities?.let { items ->
-            items.filter { it.dashboard_type.equals("1")  && it.isActive == 1 }
+            items.filter { it.dashboard_type.equals("1")  && it.isActive == 1
+                    && !(isSubUserExist != "0" && it.ProdId == "41") // Exclude ProdId 41 when isValidSubUser is not "0"
+
+            }
                 .forEach { dashBoardItemEntity ->
-                    val dashboardEntity = DashboardMultiLangEntity(
-                        category = "INSURANCE",
-                        sequence = dashBoardItemEntity.sequence.toInt(),
-                        productId = dashBoardItemEntity.ProdId.toInt(),
-                        menuName = dashBoardItemEntity.menuname,
-                        description = dashBoardItemEntity.description,
-                        iconResId = -1,  // Assuming no local resource, replace if needed
+
+                        val dashboardEntity = DashboardMultiLangEntity(
+                            category = "INSURANCE",
+                            sequence = dashBoardItemEntity.sequence.toInt(),
+                            productId = dashBoardItemEntity.ProdId.toInt(),
+                            menuName = dashBoardItemEntity.menuname,
+                            description = dashBoardItemEntity.description,
+                            iconResId = -1,  // Assuming no local resource, replace if needed
 
 
-                        productName = dashBoardItemEntity.menuname,
-                        productDetails =   dashBoardItemEntity.description,
+                            productName = dashBoardItemEntity.menuname,
+                            productDetails = dashBoardItemEntity.description,
 
-                        titleKey = "Insurance",
-                        descriptionKey = "",
-                        isNewPrdClickable = dashBoardItemEntity.IsNewprdClickable,
-                        serverIcon = dashBoardItemEntity.iconimage,
-                        link = dashBoardItemEntity.link,
+                            titleKey = "Insurance",
+                            descriptionKey = "",
+                            isNewPrdClickable = dashBoardItemEntity.IsNewprdClickable,
+                            serverIcon = dashBoardItemEntity.iconimage,
+                            link = dashBoardItemEntity.link,
 
-                        productNameFontColor = dashBoardItemEntity.ProductNameFontColor,
-                        productDetailsFontColor = dashBoardItemEntity.ProductDetailsFontColor,
-                        productBackgroundColor = dashBoardItemEntity.ProductBackgroundColor,
+                            productNameFontColor = dashBoardItemEntity.ProductNameFontColor,
+                            productDetailsFontColor = dashBoardItemEntity.ProductDetailsFontColor,
+                            productBackgroundColor = dashBoardItemEntity.ProductBackgroundColor,
 
-                        isExclusive = dashBoardItemEntity.IsExclusive,
-                        isSharable = dashBoardItemEntity.IsSharable,
-                        title = dashBoardItemEntity.title,
-                        info = dashBoardItemEntity.info,
-                        popupmsg = dashBoardItemEntity.popupmsg
-                    )
-                    dashboardEntities.add(dashboardEntity)
+                            isExclusive = dashBoardItemEntity.IsExclusive,
+                            isSharable = dashBoardItemEntity.IsSharable,
+                            title = dashBoardItemEntity.title,
+                            info = dashBoardItemEntity.info,
+                            popupmsg = dashBoardItemEntity.popupmsg
+                        )
+                        dashboardEntities.add(dashboardEntity)
                 }
         }
 

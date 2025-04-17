@@ -3,6 +3,7 @@ package com.policyboss.policybosspro.core.viewModel.loginVM
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.policyboss.policybosspro.core.APIState
+import com.policyboss.policybosspro.core.Event
 import com.policyboss.policybosspro.core.repository.loginRepository.LoginRepository
 import com.policyboss.policybosspro.core.response.forgotPwd.ForgotResponse
 import com.policyboss.policybosspro.core.response.login.AuthLoginResponse
@@ -66,23 +67,23 @@ class LoginViewModel @Inject constructor(
 
 
     //region get isUserSignUp or Not ?
-    private  val getsignUpMutuableStateFlow : MutableStateFlow<APIState<UserNewSignUpResponse>> = MutableStateFlow(APIState.Empty())
+    private  val getsignUpMutuableStateFlow : MutableStateFlow<Event<APIState<UserNewSignUpResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val getsignUpStateFlow : StateFlow<APIState<UserNewSignUpResponse>>
+    val getsignUpStateFlow : StateFlow<Event<APIState<UserNewSignUpResponse>>>
         get() = getsignUpMutuableStateFlow
 
     //endregion
 
-    private val insertTokenMutuableStateFlow : MutableStateFlow<APIState<DevicetokenResponse>> = MutableStateFlow(APIState.Empty())
+    private val insertTokenMutuableStateFlow : MutableStateFlow<Event<APIState<DevicetokenResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val insertTokenStateFlow : StateFlow<APIState<DevicetokenResponse>>
+    val insertTokenStateFlow : StateFlow<Event<APIState<DevicetokenResponse>>>
         get() = insertTokenMutuableStateFlow
 
     //.........
     //region DSAS Login
-    private  val loginMutuableStateFlow : MutableStateFlow<APIState<LoginNewResponse_DSAS_Horizon>> = MutableStateFlow(APIState.Empty())
+    private  val loginMutuableStateFlow : MutableStateFlow<Event<APIState<LoginNewResponse_DSAS_Horizon>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val LoginStateFlow : StateFlow<APIState<LoginNewResponse_DSAS_Horizon>>
+    val LoginStateFlow : StateFlow<Event<APIState<LoginNewResponse_DSAS_Horizon>>>
         get() = loginMutuableStateFlow
 
   //endregion
@@ -90,9 +91,9 @@ class LoginViewModel @Inject constructor(
     //region OTP via Login
 
     //region otp  Initialization
-    private  val otpLoginMutuableStateFlow : MutableStateFlow<APIState<OtpLoginResponse>> = MutableStateFlow(APIState.Empty())
+    private  val otpLoginMutuableStateFlow : MutableStateFlow<Event<APIState<OtpLoginResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val otpLoginStateFlow : StateFlow<APIState<OtpLoginResponse>>
+    val otpLoginStateFlow : StateFlow<Event<APIState<OtpLoginResponse>>>
         get() = otpLoginMutuableStateFlow
     //endregion
 
@@ -102,34 +103,34 @@ class LoginViewModel @Inject constructor(
 
 
     //region OTP Verification via Login
-    private  val otpVerificationMutuableStateFlow : MutableStateFlow<APIState<OtpVerifyResponse>> = MutableStateFlow(APIState.Empty())
+    private  val otpVerificationMutuableStateFlow : MutableStateFlow<Event<APIState<OtpVerifyResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val otpVerificationStateFlow : StateFlow<APIState<OtpVerifyResponse>>
+    val otpVerificationStateFlow : StateFlow<Event<APIState<OtpVerifyResponse>>>
         get() = otpVerificationMutuableStateFlow
 
     //endregion
 
 
     //region OTP  Resend
-    private  val otpResendMutuableStateFlow : MutableStateFlow<APIState<OtpVerifyResponse>> = MutableStateFlow(APIState.Empty())
+    private  val otpResendMutuableStateFlow : MutableStateFlow<Event<APIState<OtpVerifyResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val otpResendStateFlow : StateFlow<APIState<OtpVerifyResponse>>
+    val otpResendStateFlow : StateFlow<Event<APIState<OtpVerifyResponse>>>
         get() = otpVerificationMutuableStateFlow
 
     //endregion
 
     //region Password via Login
-    private  val authLoginMutuableStateFlow : MutableStateFlow<APIState<AuthLoginResponse>> = MutableStateFlow(APIState.Empty())
+    private  val authLoginMutuableStateFlow : MutableStateFlow<Event<APIState<AuthLoginResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val authLoginStateFlow : StateFlow<APIState<AuthLoginResponse>>
+    val authLoginStateFlow : StateFlow<Event<APIState<AuthLoginResponse>>>
         get() = authLoginMutuableStateFlow
 
     //endregion
 
     //region forgotPassword ?
-    private  val forgotPasswordMutuableStateFlow : MutableStateFlow<APIState<ForgotResponse>> = MutableStateFlow(APIState.Empty())
+    private  val forgotPasswordMutuableStateFlow : MutableStateFlow<Event<APIState<ForgotResponse>>> = MutableStateFlow(Event(APIState.Empty()))
 
-    val forgotPasswordStateFlow : StateFlow<APIState<ForgotResponse>>
+    val forgotPasswordStateFlow : StateFlow<Event<APIState<ForgotResponse>>>
         get() = forgotPasswordMutuableStateFlow
 
     //endregion
@@ -146,29 +147,29 @@ class LoginViewModel @Inject constructor(
         body.put("device_code", deviceCode)
 
 
-        getsignUpMutuableStateFlow.value = APIState.Loading()
+        getsignUpMutuableStateFlow.value = Event(APIState.Loading())
 
         setSsid("")
         loginNewRepository.getusersignup(body)
             .catch {
-                getsignUpMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                getsignUpMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
             }
             .collect{ data ->
                 if (data?.isSuccessful == true){
                     if(data.body()?.StatusNo?:1 == 0)
                     {
 
-                            getsignUpMutuableStateFlow.value = APIState.Success(data = data.body())
+                            getsignUpMutuableStateFlow.value = Event(APIState.Success(data = data.body()))
 
                     }
                     else{
 
-                        otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                        otpLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                     }
                 }
                 else
                 {
-                    otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                    otpLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                 }
 
             }
@@ -182,26 +183,26 @@ class LoginViewModel @Inject constructor(
         body.put("Device_Name",prefManager.getDEVICE_NAME())
         body.put("Token",prefManager.getToken())
 
-        insertTokenMutuableStateFlow.value = APIState.Loading()
+        insertTokenMutuableStateFlow.value = Event(APIState.Loading())
 
         loginNewRepository.insert_notification_token(body)
             .catch {
-                insertTokenMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                insertTokenMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
             }
             .collect{data ->
                 if(data?.isSuccessful == true) {
                     if (data.body()?.Status == "SUCCESS") {
 
-                        insertTokenMutuableStateFlow.value = APIState.Success(data= data.body())
+                        insertTokenMutuableStateFlow.value = Event(APIState.Success(data = data.body()))
 
                     } else
                     {
-                        insertTokenMutuableStateFlow.value   = APIState.Failure(errorMessage = Constant.NOData)
+                        insertTokenMutuableStateFlow.value   = Event(APIState.Failure(errorMessage = Constant.NOData))
                     }
                 }
                 else
                 {
-                    insertTokenMutuableStateFlow.value  = APIState.Failure(errorMessage = Constant.NOData)
+                    insertTokenMutuableStateFlow.value  = Event(APIState.Failure(errorMessage = Constant.NOData))
                 }
 
             }
@@ -215,48 +216,49 @@ class LoginViewModel @Inject constructor(
 
             loginNewRepository.getLoginHorizonDetails(ss_id)
                 .catch {
-                    loginMutuableStateFlow.value = APIState.Failure(errorMessage = it.message.toString())
+                    loginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = it.message.toString()))
                 }.collect{  data ->
                     if (data.isSuccessful){
                         if(data.body()?.status?.uppercase().equals("SUCCESS"))
                         {
                             prefManager.saveLoginHorizonResponse(data.body())
-                            loginMutuableStateFlow.value = APIState.Success(data = data.body())
+                            loginMutuableStateFlow.value = Event(APIState.Success(data = data.body()))
 
                             insert_notification_token(ss_id)
                         }
                         else{
-                            loginMutuableStateFlow.value = APIState.Failure(errorMessage ="No Data Found")
+                            loginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                         }
                     }
                     else
                     {
-                        loginMutuableStateFlow.value = APIState.Failure(errorMessage ="No Data Found")
+                        loginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                     }
                 }
 
 
         }catch (ex : Exception){
 
-            loginMutuableStateFlow.value = APIState.Failure(errorMessage = Utility.ErrorMessage)
+            loginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Utility.ErrorMessage))
         }
 
     }
 
 
-    fun getotpLoginHorizon(login_id: String,deviceID : String, ipAddress : String) = viewModelScope.launch {
+    fun getotpLoginHorizon(login_id: String, token : String, deviceID : String, ipAddress : String) = viewModelScope.launch {
 
         var body = HashMap<String, String>()
         body.put("login_id", login_id)
+        body.put("token",token)
         body.put("device_id", deviceID)
         body.put("ip_address", ipAddress)
 
-        otpLoginMutuableStateFlow.value = APIState.Loading()
+        otpLoginMutuableStateFlow.value = Event(APIState.Loading())
 
         setSsid("")
         loginNewRepository.otpLoginHorizon(body)
             .catch {
-                otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.ServerError)
+                otpLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.ServerError))
             }
             .collect{ data ->
                 if (data.isSuccessful){
@@ -293,7 +295,7 @@ class LoginViewModel @Inject constructor(
                         }
                           //set here the data which we get in Activity for handling both success and failure
                           setOTPReqLoginResult(_otpLoginResult = otpLoginResult)
-                          otpLoginMutuableStateFlow.value = APIState.Success(data = data.body())
+                          otpLoginMutuableStateFlow.value = Event(APIState.Success(data = data.body()))
                           // regionNote : No need to filter on the base of Success and fail  status we need to take action on both case
 //                    if(data.body()?.Status?.uppercase().equals("SUCCESS"))
 //                    { otpLoginMutuableStateFlow.value = APIState.Success(data = data.body()) }
@@ -303,14 +305,14 @@ class LoginViewModel @Inject constructor(
                           //endregion
                     } ?: run{
 
-                        otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.SeverUnavaiable)
+                        otpLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.SeverUnavaiable))
 
                       }
 
                 }
                 else
                 {
-                    otpLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.SeverUnavaiable)
+                    otpLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.SeverUnavaiable))
                 }
 
             }
@@ -322,14 +324,14 @@ class LoginViewModel @Inject constructor(
 
 
         // Loading is start from Verify
-        otpVerificationMutuableStateFlow.value = APIState.Loading()
+        otpVerificationMutuableStateFlow.value = Event(APIState.Loading())
         //loginMutuableStateFlow.value = APIState.Loading()
 
         try {
 
             loginNewRepository.otpVerifyHorizon(otp, mobileno)
                 .catch {
-                    otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.InValidOTP)
+                    otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.InValidOTP))
                 }.collect{  data ->
                     if (data.isSuccessful){
                         if(data.body()?.Msg?.uppercase().equals("SUCCESS"))
@@ -343,25 +345,25 @@ class LoginViewModel @Inject constructor(
 
                             }else{
 
-                                otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = "SSID not generated.Please contact admin")
+                                otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = "SSID not generated.Please contact admin"))
 
                             }
 
                         }
                         else{
-                            otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.InValidOTP)
+                            otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.InValidOTP))
                         }
                     }
                     else
                     {
-                        otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.InValidOTP)
+                        otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.InValidOTP))
                     }
                 }
 
 
         }catch (ex : Exception){
 
-            otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = Utility.ErrorMessage)
+            otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Utility.ErrorMessage))
         }
 
     }
@@ -396,7 +398,7 @@ class LoginViewModel @Inject constructor(
 
         }catch (ex : Exception){
 
-            otpResendMutuableStateFlow.value = APIState.Failure(errorMessage = Utility.ErrorMessage)
+            otpResendMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Utility.ErrorMessage))
         }
 
     }
@@ -449,13 +451,13 @@ class LoginViewModel @Inject constructor(
     fun  otpVerifyHorizonOld(otp : String) = viewModelScope.launch {
 
 
-        otpVerificationMutuableStateFlow.value = APIState.Loading()
+        otpVerificationMutuableStateFlow.value = Event(APIState.Loading())
 
         try {
 
             loginNewRepository.otpVerifyHorizon(otp,"")
                 .catch {
-                    otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = it.message.toString())
+                    otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = it.message.toString()))
                 }.collect{  data ->
                     if (data.isSuccessful){
                         if(data.body()?.Msg?.uppercase().equals("SUCCESS"))
@@ -466,19 +468,19 @@ class LoginViewModel @Inject constructor(
                             getLoginDetailHorizon(getSsid())
                         }
                         else{
-                            otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage ="No Data Found")
+                            otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage ="No Data Found"))
                         }
                     }
                     else
                     {
-                        otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage ="No Data Found")
+                        otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage ="No Data Found"))
                     }
                 }
 
 
         }catch (ex : Exception){
 
-            otpVerificationMutuableStateFlow.value = APIState.Failure(errorMessage = Utility.ErrorMessage)
+            otpVerificationMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Utility.ErrorMessage))
         }
 
     }
@@ -492,11 +494,11 @@ class LoginViewModel @Inject constructor(
 
         setSsid("")
 
-        authLoginMutuableStateFlow.value = APIState.Loading()
+        authLoginMutuableStateFlow.value = Event(APIState.Loading())
 
         loginNewRepository.authLoginHorizon(body)
             .catch {
-                authLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.ServerError)
+                authLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.ServerError))
             }
             .collect{ data ->
                 if (data.isSuccessful){
@@ -511,7 +513,7 @@ class LoginViewModel @Inject constructor(
 
                             getLoginDetailHorizon(it)
                         }?: also {
-                            loginMutuableStateFlow.value = APIState.Failure(errorMessage = "SSID not generated.Please contact admin")
+                            loginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = "SSID not generated.Please contact admin"))
                         }
 
 
@@ -522,12 +524,12 @@ class LoginViewModel @Inject constructor(
 //                        authLoginMutuableStateFlow.value =
 //                            APIState.Failure(errorMessage = data.body()?.Msg?.ExceptionMessage ?: Constant.InValidPass)
 
-                        authLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.InValidPass)
+                        authLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.InValidPass))
                     }
                 }
                 else
                 {
-                    authLoginMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.ServerError)
+                    authLoginMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.ServerError))
                 }
 
             }
@@ -546,29 +548,29 @@ class LoginViewModel @Inject constructor(
         body.put("device_code", deviceCode)
 
 
-        getsignUpMutuableStateFlow.value = APIState.Loading()
+        getsignUpMutuableStateFlow.value = Event(APIState.Loading())
 
         setSsid("")
         loginNewRepository.forgotPassword(body)
             .catch {
-                forgotPasswordMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                forgotPasswordMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
             }
             .collect{ data ->
                 if (data?.isSuccessful == true){
                     if(data.body()?.StatusNo?:1 == 0)
                     {
 
-                        forgotPasswordMutuableStateFlow.value = APIState.Success(data = data.body())
+                        forgotPasswordMutuableStateFlow.value = Event(APIState.Success(data = data.body()))
 
                     }
                     else{
 
-                        forgotPasswordMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                        forgotPasswordMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                     }
                 }
                 else
                 {
-                    forgotPasswordMutuableStateFlow.value = APIState.Failure(errorMessage = Constant.NOData)
+                    forgotPasswordMutuableStateFlow.value = Event(APIState.Failure(errorMessage = Constant.NOData))
                 }
 
             }

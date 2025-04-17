@@ -141,5 +141,6 @@ data class UserConstantEntity(
     val showmyinsurancebusiness: String,
     val uid: String,
     val ultralakshyaenabled: Int,
-    val userid: String
+    val userid: String,
+    val enable_pro_Addsubuser_url : String? = null
 )

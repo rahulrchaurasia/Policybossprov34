@@ -156,12 +156,12 @@ class CallLogWorkManager (
             var subLoglist: List<CallLogEntity>
             if (callLogList != null && callLogList!!.size > 0) {
 
-                for (i in 0..callLogList!!.size - 1 step ProgressStep) {
+                for (i in 0 until callLogList.size step ProgressStep) {
 
                     Log.d(TAG, "CallLog for 2 call Number of data jumped ${i}")
 
-                    subLoglist = callLogList!!.filter { it.id > i && it.id <= (ProgressStep + i) }
-
+                   // subLoglist = callLogList!!.filter { it.id > i && it.id <= (ProgressStep + i) }
+                     subLoglist = callLogList.subList(i, minOf(i + ProgressStep, callLogList.size))
 
 
                     // region calling to server

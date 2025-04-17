@@ -3,11 +3,15 @@ package com.policyboss.policybosspro.view.introslider
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.View
 import com.policyboss.policybosspro.R
 import com.policyboss.policybosspro.analytics.WebEngageAnalytics
 import com.policyboss.policybosspro.databinding.ActivityEulaBinding
 import com.policyboss.policybosspro.facade.PolicyBossPrefsManager
+import com.policyboss.policybosspro.utils.Constant
 import com.policyboss.policybosspro.view.login.LoginActivity
 import com.policyboss.policybosspro.webview.MyWebViewClient
 import com.webengage.sdk.android.WebEngage
@@ -47,7 +51,14 @@ class EulaActivity : AppCompatActivity(), View.OnClickListener{
             R.id.btnAgree -> {
 
                 prefManager.setFirstTimeLaunch(false)
-                startActivity(Intent(this, LoginActivity::class.java))
+                Log.d(Constant.TAG,"isFirstTimeLaunch: false, Eula set")
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    startActivity(Intent(this, LoginActivity::class.java))
+                }, 200)  // 100ms delay to allow apply() to persist
+
+
+
                 trackEvent("I Agree")
             }
             R.id.btnDisAgree -> {

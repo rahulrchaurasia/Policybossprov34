@@ -126,11 +126,14 @@
 
         </RelativeLayout>
 
+
+
         <View
             android:layout_width="match_parent"
             android:layout_height="0.4dp"
             android:layout_marginTop="10dp"
-            android:background="@color/lightGrey"></View>
+            android:background="@color/lightGrey" />
+
 
         <LinearLayout
             android:layout_width="match_parent"

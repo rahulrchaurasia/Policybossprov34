@@ -271,6 +271,20 @@
                 android:orderInCategory="830"
                 android:title="Account-Delete" />
 
+            <item
+                android:id="@+id/nav_QAtest"
+                android:icon="@drawable/delete"
+                android:orderInCategory="830"
+                android:visible="true"
+                android:title="QA-Testing" />
+
+            <item
+                android:id="@+id/nav_QAtest2"
+                android:icon="@drawable/delete"
+                android:orderInCategory="830"
+                android:visible="true"
+                android:title="QA-Testing2" />
+
         </menu>
     </item>
 

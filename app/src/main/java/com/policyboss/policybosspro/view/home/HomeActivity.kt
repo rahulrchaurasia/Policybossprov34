@@ -169,6 +169,8 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        prefsManager.setFirstTimeLaunch(false)
+
         // Initialize views
         // region Set the toolbar as ActionBar
         setSupportActionBar(binding.toolbar)
@@ -288,6 +290,9 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
 
        // setSelectedNavigationItem(R.id.nav_myaccount)
+
+
+        Log.d(Constant.TAG,"isFirstTimeLaunch: ${prefsManager.isFirstTimeLaunch()}")
 
 
     }
@@ -755,6 +760,9 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             R.id.nav_pospenrollment -> {
                 startPospEnrollment()
             }
+            R.id.nav_addposp -> {
+                startADDSubPOSP()
+            }
 
             R.id.nav_leaddetail -> {
                 startLeadDetailActivity()
@@ -796,6 +804,27 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                 )
             }
 
+            R.id.nav_QAtest -> {
+
+                //Test QA Testing
+                openCommonWebView(
+                    "https://qa-www.policyboss.com/car-insurance?ss_id=7582&fba_id=54063&sub_fba_id=0&ip_address=192.0.0.2&mac_address=192.0.0.2&app_version=policyboss-1.4.0.9&product_id=1",
+                    "QA TEST",
+                    "QA TEST",
+                    "" // No dashboard type for policy
+                )
+            }
+            R.id.nav_QAtest2 -> {
+
+                //Test QA Testing
+                openCommonWebView(
+                    "https://qa-www.policyboss.com/car-insurance/proposal-summary?ClientID=2&ARN=ARN-LGQHE7WC-J3DB-POON-ULMW-K6KKPAKZPKP5_6306205_5360&POSP=NonPOSP&SsID=0",
+                    "QA TEST 2",
+                    "QA TEST 2",
+                    "" // No dashboard type for policy
+                )
+            }
+
             R.id.nav_logout -> {
                 dialogLogout()
             }
@@ -828,6 +857,35 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
         }
 
+       // if SubUser Exist hide below menu
+       if(prefsManager.getSUBUserSSId() != "0"){
+
+           navMenu.findItem(R.id.nav_leaddetail)?.isVisible = false
+           navMenu.findItem(R.id.nav_contact)?.isVisible = false
+           navMenu.findItem(R.id.nav_myaccount)?.isVisible = false
+
+           navMenu.findItem(R.id.nav_addposp)?.isVisible = false
+
+       }
+       else{
+
+           navMenu.findItem(R.id.nav_leaddetail)?.isVisible = true
+           navMenu.findItem(R.id.nav_contact)?.isVisible = true
+           navMenu.findItem(R.id.nav_myaccount)?.isVisible = true
+
+
+           if(prefsManager.getUserType() == Constant.POSP &&  prefsManager.getERPID()!= "0"
+               &&  (prefsManager.getEnableProAddSubUserUrl().isNotEmpty())){
+
+               navMenu.findItem(R.id.nav_addposp)?.isVisible = true
+           }else{
+               navMenu.findItem(R.id.nav_addposp)?.isVisible = false
+           }
+
+
+
+       }
+
 
     }
 
@@ -855,6 +913,19 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                     "&fbaid=" + prefsManager.getFBAID())
             putExtra("NAME", "PospEnrollment")
             putExtra("TITLE", "Posp Enrollment")
+        }
+        startActivity(intent)
+    }
+
+    private fun startADDSubPOSP() {
+        val intent = Intent(this@HomeActivity, CommonWebViewActivity::class.java).apply {
+            putExtra("URL", prefsManager.getEnableProAddSubUserUrl() +
+                    "&app_version=" + prefsManager.getAppVersion() +
+                    "&device_code=" + Utility.getDeviceID(this@HomeActivity) +
+                    "&ssid=" + prefsManager.getSSID() +
+                    "&fbaid=" + prefsManager.getFBAID())
+            putExtra("NAME", "ADD SUBUSER")
+            putExtra("TITLE", "ADD SUBUSER")
         }
         startActivity(intent)
     }
@@ -903,7 +974,25 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
             txtEntityName.text = "Ver.${Utility.getVersionName(this@HomeActivity)}"
 
-            if (prefsManager.getEmpData() != null) {
+            //Mark : IF User is SubUser
+            if(prefsManager.getSUBUserSSId() != "0"){
+
+                txtDetails.text = prefsManager.getSUBUserName()
+                txtFbaID.text = "Fba Id - ${prefsManager.getSUBUserFBAID()}"
+                txtReferalCode.text = "Referral Code -"
+
+                weUser.login(prefsManager.getSUBUserEmailID() ?: "")
+                weUser.setOptIn(Channel.WHATSAPP, true)
+
+                weUser.setAttribute("Is Agent",
+                    when (prefsManager.getUserType()) {
+                        "POSP", "FOS" -> true
+                        else -> false
+                    }
+                )
+            }
+
+             else if (prefsManager.getEmpData() != null) {
                 txtDetails.text = prefsManager.getEmpData()?.Emp_Name ?: ""
                 txtFbaID.text = "Fba Id - ${prefsManager.getFBAID()}"
                 txtReferalCode.text = "Referral Code -"
@@ -927,25 +1016,47 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
             prefsManager.getUserConstantEntity()?.let {
                 try {
-                    txtPospNo.text = "Posp No - ${prefsManager.getSSID()}"
-                    txtErpID.text = "Erp Id - ${prefsManager.getERPID()}"
 
-                    val fullname = prefsManager.getName().split("\\s+".toRegex())
-                    weUser.setFirstName(fullname[0])
-                    weUser.setLastName(fullname.getOrNull(1) ?: "")
+                    //Mark : IF User is SubUser
+                    if(prefsManager.getSUBUserSSId() != "0"){
+                        txtPospNo.text = "Posp No - ${prefsManager.getSUBUserSSId()}"
+                        txtErpID.text = "Erp Id - ${prefsManager.getERPID()}"
 
-                    weUser.setAttribute("POSP No.", prefsManager.getSSID().toIntOrNull() ?: 0)
-                    weUser.setPhoneNumber(prefsManager.getEmpData()?.Mobile_Number ?: "" )
-                    weUser.setEmail(prefsManager.getEmpData()?.Email_Id ?: "")
+                        weUser.setFirstName(prefsManager.getSUBUser()?.First_Name?: "")
+                        weUser.setLastName(prefsManager.getSUBUser()?.Last_Name?: "")
 
-                    Glide.with(this@HomeActivity)
-                        .load(prefsManager.getUserConstantEntity()?.loansendphoto)
-                        .placeholder(R.drawable.circle_placeholder)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .skipMemoryCache(true)
-                        .override(64, 64)
-                        .transform(CircleCrop()) // applying image transformer
-                        .into(ivProfile)
+                        weUser.setAttribute("POSP No.", prefsManager.getSUBUserSSId().toIntOrNull() ?: 0)
+                        weUser.setPhoneNumber(prefsManager.getSUBUser()?.Mobile ?: "" )
+                        weUser.setEmail(prefsManager.getSUBUser()?.Email_ID ?: "")
+
+
+                    }
+                    else{
+                        txtPospNo.text = "Posp No - ${prefsManager.getSSID()}"
+                        txtErpID.text = "Erp Id - ${prefsManager.getERPID()}"
+
+                        val fullname = prefsManager.getName().split("\\s+".toRegex())
+                        weUser.setFirstName(fullname[0])
+                        weUser.setLastName(fullname.getOrNull(1) ?: "")
+
+                        weUser.setAttribute("POSP No.", prefsManager.getSSID().toIntOrNull() ?: 0)
+                        weUser.setPhoneNumber(prefsManager.getEmpData()?.Mobile_Number ?: "" )
+                        weUser.setEmail(prefsManager.getEmpData()?.Email_Id ?: "")
+
+
+                        Glide.with(this@HomeActivity)
+                            .load(prefsManager.getUserConstantEntity()?.loansendphoto)
+                            .placeholder(R.drawable.circle_placeholder)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .skipMemoryCache(true)
+                            .override(64, 64)
+                            .transform(CircleCrop()) // applying image transformer
+                            .into(ivProfile)
+
+                    }
+
+
+
 
                 } catch (e: Exception) {
                     // Handle exception
@@ -1002,7 +1113,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
 
     //endregion
-
+    
     //region Deeplik Handling
 
 
@@ -1017,6 +1128,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         val subSSID = prefsManager.getSUBUserSSId()
         val subFBAID = prefsManager.getSUBUserFBAID()
 
+
         if (!deeplinkValue.isNullOrEmpty()) {
 
             try {
@@ -1028,6 +1140,11 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                 Title = titleValue
 
                 when (prdID) {
+
+                    //id 500 from Home Page
+                    "500" ->{
+                        return
+                    }
                     "41" -> startActivity(Intent(this, WelcomeSyncContactActivityKotlin::class.java))
                     "501" -> startActivity(Intent(this, MyAccountActivity::class.java))
                     "502" -> {
@@ -1137,6 +1254,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                         // Update deeplinkValue with appended parameters
                         val updatedDeeplinkValue = deeplinkValue + append
 
+                        Log.d("Deeplink URL", updatedDeeplinkValue.toString())
                         // Delayed execution using Coroutine
                         Handler(Looper.getMainLooper()).postDelayed({
                             startActivity(Intent(this, CommonWebViewActivity::class.java).apply {
@@ -1297,6 +1415,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
 
     //endregion
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.dashboard_menu, menu)
 
@@ -2021,6 +2140,7 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                                 initHeaderLayout()
                                 shortcutAppMenu()
 
+
                                 if (!prefsManager.getDeepLink().isNullOrEmpty()) {
                                     // Handle deep link here
                                     deeplinkHandle()
@@ -2178,6 +2298,9 @@ class HomeActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
                     }
                 }
+
+
+
 
             }
         }

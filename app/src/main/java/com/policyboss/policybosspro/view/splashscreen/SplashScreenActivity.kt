@@ -12,6 +12,7 @@ import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import com.google.firebase.messaging.FirebaseMessaging
 import com.policyboss.policybosspro.databinding.ActivitySplashScreenBinding
 import com.policyboss.policybosspro.facade.PolicyBossPrefsManager
+import com.policyboss.policybosspro.utils.Constant
 
 import com.policyboss.policybosspro.view.home.HomeActivity
 import com.policyboss.policybosspro.view.introslider.WelcomeActivity
@@ -20,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 
@@ -33,14 +35,17 @@ class SplashScreenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySplashScreenBinding.inflate(layoutInflater)
+
         //setContentView(binding.root)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             installSplashScreen()
         }
+
+        binding = ActivitySplashScreenBinding.inflate(layoutInflater)
+
         setContentView(binding.root)
 
-        getDynamicLinkFromFirebase()
+
 
         // Launch coroutine for initialization sequence
         lifecycleScope.launch {
@@ -91,16 +96,20 @@ class SplashScreenActivity : AppCompatActivity() {
         try {
             // First fetch token
 
-            initAuthReceiver()
-            val token = getToken()
+            // Fetch token
+             getToken()
 
-
+            // Get dynamic link from Firebase
             getDynamicLinkFromFirebase()
+
             // Then handle navigation
             if (prefManager.isFirstTimeLaunch()) {
+
+                Log.d(Constant.TAG,"isFirstTimeLaunch: true, Move Welcome")
                 navigateToWelcome()
             } else {
                 delay(2000) // Optional delay if you still want it
+                Log.d(Constant.TAG,"isFirstTimeLaunch: false, Move Home")
                 navigateBasedOnLoginStatus()
             }
         } catch (e: Exception) {
@@ -121,6 +130,8 @@ class SplashScreenActivity : AppCompatActivity() {
         val targetActivity = if (prefManager.getEmpData() != null) {
             HomeActivity::class.java
         } else {
+
+            Log.d(Constant.TAG,"Login Data , Not Employee")
             LoginActivity::class.java
         }
 
@@ -134,7 +145,87 @@ class SplashScreenActivity : AppCompatActivity() {
     //**********************************************************//
 
 
-    private fun getDynamicLinkFromFirebase() {
+
+
+
+    private suspend fun getDynamicLinkFromFirebase() {
+        try {
+            val pendingDynamicLinkData = FirebaseDynamicLinks.getInstance()
+                .getDynamicLink(intent)
+                .await() // Use Kotlin Coroutines to await the result
+
+            val deepLink: Uri? = pendingDynamicLinkData?.link ?: intent.data
+
+            deepLink?.let {
+                val deeplinkUrl = it.toString()
+                Log.i("Dynamic Link", deeplinkUrl)
+                prefManager.setDeeplink(deeplinkUrl)
+                // Handle deep link navigation if needed
+            } ?: run {
+                prefManager.setDeeplink("")
+                Log.d("Dynamic Link", "No dynamic link found")
+            }
+        } catch (e: Exception) {
+            Log.d("Dynamic Link", "Failed to get dynamic link", e)
+            // Handle the error case, e.g., show a toast or fallback to a default behavior
+           // Toast.makeText(this, "Failed to fetch dynamic link", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+
+    private fun testDeeplink(){
+
+        val deeplinkUrl =  "https://www.policyboss.com/UI22/sync?product_id=506"
+        prefManager.setDeeplink(deeplinkUrl)
+    }
+
+
+    private suspend fun getToken() {
+        try {
+            // Fetch the FCM token in a coroutine
+            val token = FirebaseMessaging.getInstance().token.await() // Use Kotlin Coroutines to await the result
+
+            token?.let {
+                // Save the token in SharedPreferences
+                prefManager.setToken(it)
+                Log.d("FCMToken", "Token fetched on app start: $it")
+            } ?: Log.e("FCMToken", "Fetching FCM token failed: Token is null")
+        } catch (e: Exception) {
+            Log.e("FCMToken Error", "Error fetching FCM token", e)
+        }
+    }
+
+
+    //region comment
+    private suspend fun getTokenOLD(){
+
+       // Fetch the FCM token in the background
+      // lifecycleScope.launch(Dispatchers.IO) {
+        try {
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+
+                    token?.let {
+                        // Save the token in SharedPreferences
+                        prefManager.setToken(it)
+                        Log.d("FCMToken", "Token fetched on app start: $it")
+                    }
+                } else {
+                    Log.e("FCMToken", "Fetching FCM token failed", task.exception)
+                }
+            }
+        }
+        catch (e: Exception) {
+            Log.e("FCMToken Error", "Error fetching FCM token", e)
+            Log.d("FCMToken Error", "Error fetching FCM token", e)
+        }
+      // }
+
+   }
+
+    private suspend  fun getDynamicLinkFromFirebaseOLD() {
         FirebaseDynamicLinks.getInstance()
             .getDynamicLink(intent)
             .addOnSuccessListener(this) { pendingDynamicLinkData ->
@@ -179,51 +270,12 @@ class SplashScreenActivity : AppCompatActivity() {
             .addOnFailureListener(this) { e ->
                 Log.w("HomeActivity", "getDynamicLink:onFailure", e)
                 // Proceed normally if dynamic link fetching failed
-               // handleNoDeepLink()
+                // handleNoDeepLink()
             }
     }
 
-    private fun testDeeplink(){
+    //endregion
 
-        val deeplinkUrl =  "https://www.policyboss.com/UI22/sync?product_id=506"
-        prefManager.setDeeplink(deeplinkUrl)
-    }
-
-    private fun getToken(){
-
-       // Fetch the FCM token in the background
-       lifecycleScope.launch(Dispatchers.IO) {
-           FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-               if (task.isSuccessful) {
-                   val token = task.result
-
-                   token?.let {
-                       // Save the token in SharedPreferences
-                       prefManager.setToken(it)
-                       Log.d("FCMToken", "Token fetched on app start: $it")
-                   }
-               } else {
-                   Log.e("FCMToken", "Fetching FCM token failed", task.exception)
-               }
-           }
-       }
-
-   }
-
-    private fun initAuthReceiver(){
-
-//        val  acesstoken = AccessToken()
-//        var oathToken = acesstoken.accessToken
-//
-//        val tokenGenerator = TokenGenerator()
-//        val accessToken = tokenGenerator.getAccessTokenFromServiceAccount()
-
-
-
-
-
-
-    }
 
 
 

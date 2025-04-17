@@ -547,7 +547,22 @@ public class CommonWebViewActivity extends BaseJavaActivity implements BaseJavaA
             //   showAlertDialog();
         }
 
+        @JavascriptInterface
+        public void test() {
+
+            Toast.makeText(CommonWebViewActivity.this, "Testing ",Toast.LENGTH_SHORT).show();
+
+        }
+
+        @JavascriptInterface
+        public void test(String url) {
+
+            Toast.makeText(CommonWebViewActivity.this, "Testing -"+ url ,Toast.LENGTH_SHORT).show();
+
+        }
+
         //download
+
         @JavascriptInterface
         public void document_download(String url) {
 

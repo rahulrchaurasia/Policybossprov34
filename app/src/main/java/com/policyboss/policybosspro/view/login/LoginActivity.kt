@@ -82,7 +82,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
     private lateinit var alertDialogPassword: AlertDialog
 
-    private lateinit var alertDialogOTP : AlertDialog
+    private  var alertDialogOTP : AlertDialog? = null
 
 
 
@@ -469,7 +469,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         }
 
         bindingOTP.imgClose.setOnClickListener {
-            alertDialogOTP.dismiss()
+            alertDialogOTP?.dismiss()
             // Cancel the existing timer if it's running
             cancelTimer()
 
@@ -526,17 +526,17 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
         startTimerCountdown(bindingOTP.txtcountdownTimer, bindingOTP.txtResend)
 
-        alertDialogOTP.setCancelable(false)
+        alertDialogOTP?.setCancelable(false)
 
 
 
-        alertDialogOTP.getWindow()
+        alertDialogOTP?.getWindow()
             ?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        alertDialogOTP.getWindow()?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        alertDialogOTP?.getWindow()?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         showKeyboard(bindingOTP.btnSubmit)
 
 
-        alertDialogOTP.show()
+        alertDialogOTP?.show()
     }
 
     //region Alert when Error Message is Come ...Only for Wrong OTP handling. ie when Otp Open again
@@ -658,7 +658,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
         }
         bindingOTP.imgClose.setOnClickListener {
-            alertDialogOTP.dismiss()
+            alertDialogOTP?.dismiss()
             // Cancel the existing timer if it's running
             cancelTimer()
             bindingOTP.pinview.removeTextChangedListener(pinnedViewTextWatcher)
@@ -707,8 +707,8 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         }
 
         startTimerCountdown(bindingOTP.txtcountdownTimer, bindingOTP.txtResend, remainingTime = loginViewModel.remaingTime)
-        alertDialogOTP.show()
-        alertDialogOTP.setCancelable(false)
+        alertDialogOTP?.show()
+        alertDialogOTP?.setCancelable(false)
 
 
 
@@ -750,6 +750,11 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
     //endregion
 
     private fun showPasswordDialog(strUserID : String) {
+
+        if (this.isFinishing || this.isDestroyed) {
+            return // Exit the function if the activity is not in a valid state
+        }
+
 
         //var binding: LayoutLoginViapasswordBinding? = null
 
@@ -842,7 +847,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
     private fun pasteOTP( strOTP : String) {
 
-        if (this@LoginActivity::alertDialogOTP.isInitialized ) {
+        if (alertDialogOTP != null ) {
 
 
             if (alertDialogOTP!!.isShowing) {
@@ -858,9 +863,9 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
                         // val btnSubmit = alertDialogOTP.findViewById<Button>(R.id.btnSubmit)
 
 
-                        var pinview = alertDialogOTP.findViewById<com.chaos.view.PinView>(R.id.pinview)
+                        var pinview = alertDialogOTP?.findViewById<com.chaos.view.PinView>(R.id.pinview)
 
-                        pinview.setText(strOTP)
+                        pinview?.setText(strOTP)
                         //********************************************************************************
                         //Note : Since we have written pinview textChange Listener : trigger will done at 4 th position
 
@@ -941,9 +946,9 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
             override fun onFinish() {
 
                 txtTimer.text = "00:00"
-                if (this@LoginActivity::alertDialogOTP.isInitialized){
-                    if(alertDialogOTP.isShowing){
-                        alertDialogOTP.dismiss()
+                if (alertDialogOTP != null ){
+                    if(alertDialogOTP?.isShowing == true){
+                        alertDialogOTP?.dismiss()
                     }
                 }
 
@@ -967,78 +972,79 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         //region  is UserSignUp
         lifecycleScope.launch {
 
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                loginViewModel.getsignUpStateFlow.collect {
+                loginViewModel.getsignUpStateFlow.collect { event ->
 
-                    when (it) {
-                        is APIState.Loading -> {
-                            // showAnimDialog()
-                            displayLoadingWithText()
+                    event.contentIfNotHandled?.let {
 
-                        }
-
-                        is APIState.Success -> {
-
-
-                            hideLoading()
-                            if (it != null) {
-
-                                //pospurl
-
-                                enable_pro_signupurl = it.data?.MasterData?.get(0)?.enable_pro_signupurl?: ""
-
-                                prefManager.setEnableProPOSPurl(enable_pro_signupurl)
-
-
-                                enable_otp_only = it.data?.MasterData?.get(0)?.enable_otp_only?:""
-
-                                if(enable_otp_only !=null)
-                                {
-                                    if (enable_otp_only.isEmpty())
-                                    {
-                                        binding.includeLoginNew.lyloginvia.visibility = View.VISIBLE
-                                        binding.includeLoginNew.lblloginvia.visibility = View.VISIBLE
-                                    }
-                                    else
-                                    {
-
-                                        if(enable_otp_only.equals("Y"))
-                                        {
-                                            binding.includeLoginNew.lyloginvia.visibility  = View.GONE
-                                            binding.includeLoginNew.lblloginvia.visibility = View.GONE
-
-                                            binding.includeLoginNew.etEmail.requestFocus()
-                                        }else
-                                        {
-                                            binding.includeLoginNew.lyloginvia.visibility = View.VISIBLE
-                                            binding.includeLoginNew.lblloginvia.visibility = View.VISIBLE
-                                        }
-
-                                    }
-                                }
-                                else
-                                {
-                                    binding.includeLoginNew.lyloginvia.visibility = View.VISIBLE
-                                    binding.includeLoginNew.lblloginvia.visibility = View.VISIBLE
-                                }
-                                //add sub user
-
-                                //add sub user
-                                val getenable_pro_Addsubuser_url = it.data?.MasterData?.get(0)?.enable_pro_Addsubuser_url?: ""
-                                prefManager.setEnablePro_ADDSUBUSERurl(getenable_pro_Addsubuser_url)
+                        when (it) {
+                            is APIState.Loading -> {
+                                // showAnimDialog()
+                                displayLoadingWithText()
 
                             }
-                        }
 
-                        is APIState.Failure -> {
-                            hideLoading()
+                            is APIState.Success -> {
 
 
-                        }
+                                hideLoading()
+                                if (it != null) {
 
-                        is APIState.Empty -> {
-                            hideLoading()
+                                    //pospurl
+
+                                    enable_pro_signupurl =
+                                        it.data?.MasterData?.get(0)?.enable_pro_signupurl ?: ""
+
+
+                                    prefManager.setEnableProPOSPurl(enable_pro_signupurl)
+
+
+
+                                    enable_otp_only =
+                                        it.data?.MasterData?.get(0)?.enable_otp_only ?: ""
+
+                                    if (enable_otp_only != null) {
+                                        if (enable_otp_only.isEmpty()) {
+                                            binding.includeLoginNew.lyloginvia.visibility =
+                                                View.VISIBLE
+                                            binding.includeLoginNew.lblloginvia.visibility =
+                                                View.VISIBLE
+                                        } else {
+
+                                            if (enable_otp_only.equals("Y")) {
+                                                binding.includeLoginNew.lyloginvia.visibility =
+                                                    View.GONE
+                                                binding.includeLoginNew.lblloginvia.visibility =
+                                                    View.GONE
+
+                                                binding.includeLoginNew.etEmail.requestFocus()
+                                            } else {
+                                                binding.includeLoginNew.lyloginvia.visibility =
+                                                    View.VISIBLE
+                                                binding.includeLoginNew.lblloginvia.visibility =
+                                                    View.VISIBLE
+                                            }
+
+                                        }
+                                    } else {
+                                        binding.includeLoginNew.lyloginvia.visibility = View.VISIBLE
+                                        binding.includeLoginNew.lblloginvia.visibility =
+                                            View.VISIBLE
+                                    }
+
+                                }
+                            }
+
+                            is APIState.Failure -> {
+                                hideLoading()
+
+
+                            }
+
+                            is APIState.Empty -> {
+                                hideLoading()
+                            }
                         }
                     }
 
@@ -1054,54 +1060,56 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         //region  Login Using OTP Alert
         lifecycleScope.launch {
 
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                loginViewModel.otpLoginStateFlow.collect {
+                loginViewModel.otpLoginStateFlow.collect { event ->
 
-                    when (it) {
-                        is APIState.Loading -> {
-                            // showAnimDialog()
-                            displayLoadingWithText()
+                    event.contentIfNotHandled?.let {
 
-                        }
+                        when (it) {
+                            is APIState.Loading -> {
+                                // showAnimDialog()
+                                displayLoadingWithText()
 
-                        is APIState.Success -> {
+                            }
+
+                            is APIState.Success -> {
 
 
-                            hideLoading()
+                                hideLoading()
 
                                 //var mobileNo = it.data?.Msg?.Mobile_No?:0
-                            // showAlert(prefManager.getSSIDByOTP())
+                                // showAlert(prefManager.getSSIDByOTP())
                                 val otpResult = loginViewModel.getOTPReqLoginResult()
 
-                            if (otpResult?.status.equals("SUCCESS",true)){
+                                if (otpResult?.status.equals("SUCCESS", true)) {
 
-                                showOTPDialog(mobNo = loginViewModel.getOtpMobileNo())
-                            }else{
+                                    showOTPDialog(mobNo = loginViewModel.getOtpMobileNo())
+                                } else {
 
 
-                                //005 temp
-                               // showAlert(msg = otpResult?.message?:"",title = "PolicyBoss Pro")
+                                    //005 temp
+                                    // showAlert(msg = otpResult?.message?:"",title = "PolicyBoss Pro")
 
-                                 loginFailVerifyAlert(strMessage =  otpResult?.message?: "")
+                                    loginFailVerifyAlert(strMessage = otpResult?.message ?: "")
+
+
+                                }
 
 
                             }
 
+                            is APIState.Failure -> {
+                                hideLoading()
+                                Log.d("Error", it.errorMessage.toString())
+                                showToast(it.errorMessage.toString())
 
 
-                        }
+                            }
 
-                        is APIState.Failure -> {
-                            hideLoading()
-                            Log.d("Error", it.errorMessage.toString())
-                            showToast(it.errorMessage.toString())
-
-
-                        }
-
-                        is APIState.Empty -> {
-                            hideLoading()
+                            is APIState.Empty -> {
+                                hideLoading()
+                            }
                         }
                     }
 
@@ -1117,43 +1125,46 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         // region otp Verification Horizon
         lifecycleScope.launch{
 
-            repeatOnLifecycle(Lifecycle.State.CREATED){
+            repeatOnLifecycle(Lifecycle.State.STARTED){
 
-                loginViewModel.otpVerificationStateFlow.collect{
+                loginViewModel.otpVerificationStateFlow.collect{ event ->
 
-                    when(it){
-                        is  APIState.Loading -> {
-                            // showAnimDialog()
-                            displayLoadingWithText()
+                    event.contentIfNotHandled?.let {
+                        when (it) {
+                            is APIState.Loading -> {
+                                // showAnimDialog()
+                                displayLoadingWithText()
 
-                        }
-
-                        is APIState.Success -> {
-
-
-
-                        }
-
-                        is APIState.Failure -> {
-                            hideLoading()
-                            Log.d("Error",it.errorMessage.toString())
-
-                            if (this@LoginActivity::alertDialogOTP.isInitialized){
-                                if(alertDialogOTP.isShowing){
-                                    alertDialogOTP.dismiss()
-                                }
                             }
 
-                            showKeyboard(binding.root)
-                            showOTPDialog(mobNo = loginViewModel.getOtpMobileNo(), errorMsg = "InValid OTP")
+                            is APIState.Success -> {
 
 
+                            }
 
-                        }
+                            is APIState.Failure -> {
+                                hideLoading()
+                                Log.d("Error", it.errorMessage.toString())
 
-                        is APIState.Empty ->{
+                                if (alertDialogOTP != null) {
+                                    if (alertDialogOTP?.isShowing == true) {
+                                        alertDialogOTP?.dismiss()
+                                    }
+                                }
+
+                                showKeyboard(binding.root)
+                                showOTPDialog(
+                                    mobNo = loginViewModel.getOtpMobileNo(),
+                                    errorMsg = "InValid OTP"
+                                )
 
 
+                            }
+
+                            is APIState.Empty -> {
+
+
+                            }
                         }
                     }
                 }
@@ -1170,36 +1181,38 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         //region Login Using Id and Password Alert
         lifecycleScope.launch{
 
-            repeatOnLifecycle(Lifecycle.State.CREATED){
+            repeatOnLifecycle(Lifecycle.State.STARTED){
 
                 if(!isPasswordObserving) {
                     isPasswordObserving = true
 
-                    loginViewModel.authLoginStateFlow.collect{
+                    loginViewModel.authLoginStateFlow.collect{ event ->
 
-                        when(it){
-                            is  APIState.Loading -> {
-                                // showAnimDialog()
-                                displayLoadingWithText()
+                        event.contentIfNotHandled?.let {
+                            when (it) {
+                                is APIState.Loading -> {
+                                    // showAnimDialog()
+                                    displayLoadingWithText()
 
-                            }
+                                }
 
-                            is APIState.Success -> {
+                                is APIState.Success -> {
 
-                                // Call Horizon DSSS API
+                                    // Call Horizon DSSS API
 
-                            }
+                                }
 
-                            is APIState.Failure -> {
-                                hideLoading()
-                                Log.d("Error",it.errorMessage.toString())
-                                showToast(it.errorMessage.toString())
+                                is APIState.Failure -> {
+                                    hideLoading()
+                                    Log.d("Error", it.errorMessage.toString())
+                                    showToast(it.errorMessage.toString())
 
 
-                            }
+                                }
 
-                            is APIState.Empty ->{
-                                hideLoading()
+                                is APIState.Empty -> {
+                                    hideLoading()
+                                }
                             }
                         }
                     }
@@ -1220,44 +1233,50 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
 
         lifecycleScope.launch{
 
-            repeatOnLifecycle(Lifecycle.State.CREATED){
+            repeatOnLifecycle(Lifecycle.State.STARTED){
 
-                loginViewModel.LoginStateFlow.collect{
+                loginViewModel.LoginStateFlow.collect{ event ->
 
-                    when(it){
-                        is  APIState.Loading -> {
+                    event.contentIfNotHandled?.let {
+                        when (it) {
+                            is APIState.Loading -> {
 
-                            //displayLoadingWithText()
-
-                        }
-
-                        is APIState.Success -> {
-
-
-                            hideLoading()
-                            if(it != null){
-
-
-
-                                showToast("Login is Successfully...")
-
-                                this@LoginActivity.finish()
-                                startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-
+                                //displayLoadingWithText()
 
                             }
-                        }
 
-                        is APIState.Failure -> {
-                            hideLoading()
-                            Log.d("LoginResp erro",it.errorMessage.toString())
+                            is APIState.Success -> {
 
 
-                            showAlert(it.errorMessage.toString())
-                        }
+                                hideLoading()
+                                if (it != null) {
 
-                        is APIState.Empty ->{
 
+                                    showToast("Login is Successfully...")
+
+                                    this@LoginActivity.finish()
+                                    startActivity(
+                                        Intent(
+                                            this@LoginActivity,
+                                            HomeActivity::class.java
+                                        )
+                                    )
+
+
+                                }
+                            }
+
+                            is APIState.Failure -> {
+                                hideLoading()
+                                Log.d("LoginResp erro", it.errorMessage.toString())
+
+
+                                showAlert(it.errorMessage.toString())
+                            }
+
+                            is APIState.Empty -> {
+
+                            }
                         }
                     }
                 }
@@ -1275,32 +1294,37 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         //region  Forgot Password
         lifecycleScope.launch {
 
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                loginViewModel.forgotPasswordStateFlow.collect {
+                loginViewModel.forgotPasswordStateFlow.collect { event ->
 
-                    when (it) {
-                        is APIState.Loading -> {
-                            // showAnimDialog()
-                            displayLoadingWithText()
+                    event.contentIfNotHandled?.let {
+                        when (it) {
+                            is APIState.Loading -> {
+                                // showAnimDialog()
+                                displayLoadingWithText()
 
-                        }
+                            }
 
-                        is APIState.Success -> {
-
-
-                            hideLoading()
-                            showAlert(it.data?.Message?:"Email has been sent on your registered Email address")
-                        }
-
-                        is APIState.Failure -> {
-                            hideLoading()
+                            is APIState.Success -> {
 
 
-                        }
+                                hideLoading()
+                                showAlert(
+                                    it.data?.Message
+                                        ?: "Email has been sent on your registered Email address"
+                                )
+                            }
 
-                        is APIState.Empty -> {
-                            hideLoading()
+                            is APIState.Failure -> {
+                                hideLoading()
+
+
+                            }
+
+                            is APIState.Empty -> {
+                                hideLoading()
+                            }
                         }
                     }
 
@@ -1434,6 +1458,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
                         val ipAddress = getLocalIpAddress()
                         loginViewModel.getotpLoginHorizon(
                             login_id =  binding.includeLoginNew.etEmail.text!!.trim().toString(),
+                            token = prefManager.getToken(),
                             deviceID = deviceID ,
                             ipAddress = getLocalIpAddress()?: "")
 
@@ -1542,6 +1567,14 @@ class LoginActivity : BaseActivity(), View.OnClickListener {
         super.onDestroy()
         unregisterSmsReceiver()
         binding.includeLoginNew.radioGroup.setOnCheckedChangeListener(null)
+
+        if (::alertDialogPassword.isInitialized && alertDialogPassword.isShowing) {
+            alertDialogPassword.dismiss()
+        }
+        alertDialogOTP?.dismiss()
+        alertDialogOTP = null
+
+
     }
 
 

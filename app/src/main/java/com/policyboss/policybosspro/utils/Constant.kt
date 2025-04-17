@@ -167,5 +167,7 @@ object Constant {
     const val ULTRALAKSHA_COMBO = "ULTRA LAKSHYA COMBO"
     const val SYNC_CONTACTS = "Sync Contacts"
 
+    const val POSP = "POSP"
+
     const val GST = 0.18
 }
